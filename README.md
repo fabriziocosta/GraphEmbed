@@ -9,6 +9,8 @@ Tomihisa Kamada, and Satoru Kawai. "An algorithm for drawing general
 undirected graphs." Information processing letters 31, no. 1 (1989): 7-15.
 
 
+## Usage
+
 Standalone script usage:
 
 ```./graph_embed -i data.csv -t target.csv --fast```
