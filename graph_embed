@@ -49,8 +49,8 @@ import numpy as np
 
 from sklearn.preprocessing import LabelEncoder
 
-from eden.graph_layout_embedder import Embedder
-from eden.graph_layout_embedder import serialize_dict
+from graph_layout_embedder import Embedder
+from graph_layout_embedder import serialize_dict
 
 import logging
 
