@@ -30,7 +30,7 @@ Options:
   --fast                            Use fast but approximate computation.
   --display                         Display graphs.
   -m N, --min_threshold=N           Minimum number of elements [default: 5].
-  --cmap_name=NAME                  String with color scheme [default: Set3].
+  --cmap_name=NAME                  Color scheme [default: gist_ncar].
   --nearest_neighbors_threshold=N   Number of neighbors [default: 4].
   --true_class_bias=N               Bias for clustering [default: 0.6].
   --true_class_threshold=N          Threshold for clusters [default: 0.005].
