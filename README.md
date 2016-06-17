@@ -36,11 +36,11 @@ Usage:
 Options:
   -i FILE                           Specify input data file.
   -t FILE                           Specify target data file.
-  -o NAME                           Prefix for output files [default: draw].
+  -o NAME                           Prefix for output files [default: image].
   --fast                            Use fast but approximate computation.
   --display                         Display graphs.
-  -m N, --min_threshold=N           Minimum number of elements [default: 5].
-  --cmap_name=NAME                  String with color scheme [default: Set3].
+  -m N, --min_threshold=N           Min number of elements per class [default: 5].
+  --cmap_name=NAME                  Color scheme [default: gist_ncar].
   --nearest_neighbors_threshold=N   Number of neighbors [default: 4].
   --true_class_bias=N               Bias for clustering [default: 0.6].
   --true_class_threshold=N          Threshold for clusters [default: 0.005].
@@ -49,4 +49,5 @@ Options:
   -h --help                         Show this screen.
   --version                         Show version.
   --verbose                         Print more text.
+
   ```
