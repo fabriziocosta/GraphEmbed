@@ -239,7 +239,7 @@ def main(args):
         data_matrix=data_matrix_corrcoef, target=y, fast=fast)
     embedder.display(target_dict=target_dict, display=display,
                      display_class_graph=True, display_clean=True,
-                     cmap=cmap_name, file_name=file_name)
+                     cmap=cmap_name, file_name=file_name, figure_size=15)
 
 
 if __name__ == '__main__':
