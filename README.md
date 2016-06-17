@@ -1,3 +1,5 @@
+[![''](https://github.com/fabriziocosta/GraphEmbed/blob/master/img.png)]
+
 # GraphEmbed
 Compute a 2D embedding of a data matrix given supervised class information.
 
