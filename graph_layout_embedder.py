@@ -21,7 +21,7 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics.pairwise import pairwise_kernels
 from sklearn.linear_model import LogisticRegression
 from sklearn.cross_validation import StratifiedKFold
-
+from sklearn.cluster import KMeans
 
 import logging
 logger = logging.getLogger(__name__)
@@ -302,16 +302,22 @@ class Embedder(object):
         probs = self._laplace_smooting(probs)
         return probs
 
-    def fit(self, data_matrix=None, target=None):
+    def fit(self, data_matrix=None, target=None, n_clusters=None):
         """fit."""
+        if target is None and n_clusters is not None:
+            clusterer = KMeans(n_clusters=n_clusters, init='k-means++',
+                               n_init=10, max_iter=300, tol=0.0001,
+                               precompute_distances='auto', verbose=0,
+                               random_state=1, copy_x=True, n_jobs=1)
+            target = clusterer.fit_predict(data_matrix)
         self.probs = self.estimate_probability_distribution(
             data_matrix=data_matrix, target=target)
         return self
 
-    def fit_transform(self, data_matrix=None, target=None):
+    def fit_transform(self, data_matrix=None, target=None, n_clusters=None):
         """fit_transform."""
-        self.fit(data_matrix=data_matrix, target=target)
-        return self.transform(data_matrix=data_matrix, target=target)
+        self.fit(data_matrix=data_matrix, target=target, n_clusters=n_clusters)
+        return self.transform(data_matrix=data_matrix, target=self.target)
 
     def transform(self, data_matrix=None, target=None):
         """transform."""
@@ -669,6 +675,8 @@ class Embedder(object):
                       cmap='gist_ncar', node_size=600, figure_size=15,
                       file_name=''):
         """Display graph."""
+        if target_dict is None:
+                target_dict = {i: i for i in set(self.target)}
         fig, ax = plt.subplots(figsize=(int(1 * figure_size), figure_size))
         if display_only_class:
             # rebuild the class graph
@@ -712,8 +720,6 @@ class Embedder(object):
                                     font_size=18, font_weight='light',
                                     font_color='k')
         else:
-            if target_dict is None:
-                target_dict = {i: i for i in set(self.target)}
             if display_hull:
                 patches = []
                 for points in self._convex_hull(
