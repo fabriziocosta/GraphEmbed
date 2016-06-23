@@ -254,6 +254,28 @@ def main(args):
         embedder.display(display=display,
                          display_class_graph=True, display_clean=True,
                          cmap=cmap_name, file_name=file_name, figure_size=11)
+    # write prediction files
+    out_fname = file_name + '_2D_coords.txt'
+    logger.info('Writing 2D coordinates to file: %s' % out_fname)
+    with open(out_fname, 'w') as f:
+        for row in embedder.embedded_data_matrix:
+            for val in row:
+                f.write('%.4f ' % val)
+            f.write('\n')
+
+    out_fname = file_name + '_target.txt'
+    logger.info('Writing targets to file: %s' % out_fname)
+    with open(out_fname, 'w') as f:
+        for t in embedder.target:
+            f.write('%d\n' % t)
+
+    out_fname = file_name + '_probs.txt'
+    logger.info('Writing probabilities to file: %s' % out_fname)
+    with open(out_fname, 'w') as f:
+        for prob in embedder.probs:
+            for p in prob:
+                f.write('%.4f ' % p)
+            f.write('\n')
 
 if __name__ == '__main__':
     args = docopt(__doc__, version='graph_embed 1.0')
