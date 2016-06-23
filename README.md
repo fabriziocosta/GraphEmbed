@@ -18,6 +18,9 @@ Standalone script usage:
 ```./graph_embed -i data.csv -t target.csv ```
 
 
+```./graph_embed -i data.csv -n 7 ```
+
+
 ```./graph_embed -i data.csv -t target.csv --correlation_transformation --true_class_bias .95 --multi_class_bias .8```
 
 
@@ -28,7 +31,7 @@ Version: 1.0
 Author: Fabrizio Costa [costa@informatik.uni-freiburg.de]
 
 Usage:
-  graph_embed -i FILE -t FILE  [-o NAME] [--cmap_name=NAME]
+  graph_embed -i FILE (-t FILE | -n N)  [-o NAME] [--cmap_name=NAME]
               [(-m N | --min_threshold=N)] [--multi_class_threshold=N]
               [--multi_class_bias=N] [--true_class_threshold=N]
               [--true_class_bias=N] [--nearest_neighbors_threshold=N]
@@ -40,6 +43,7 @@ Usage:
 Options:
   -i FILE                           Specify input data file.
   -t FILE                           Specify target data file.
+  -n N                              Specify the num of classes [default: 1].
   -o NAME                           Prefix for output files [default: image].
   --display                         Display graphs.
   -m N, --min_threshold=N           Min num of elements per class [default: 5].
