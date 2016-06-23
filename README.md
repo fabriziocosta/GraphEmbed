@@ -16,7 +16,7 @@ undirected graphs." Information processing letters 31, no. 1 (1989): 7-15.
 
 You can execute the program by typing:
 
-```./graph_embed -i data.csv -t target.csv ```
+```./graph_embed -i data.csv -t target.csv --correlation_transformation```
 
 If you want the program to cluster data on its own rather than relying on external information about the classes you need to specify the number of desired classes:
 
