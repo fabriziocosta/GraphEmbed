@@ -15,7 +15,10 @@ undirected graphs." Information processing letters 31, no. 1 (1989): 7-15.
 
 Standalone script usage:
 
-```./graph_embed -i data.csv -t target.csv --fast```
+```./graph_embed -i data.csv -t target.csv ```
+
+
+```./graph_embed -i data.csv -t target.csv --correlation_transformation --true_class_bias .95 --multi_class_bias .8```
 
 
 ## Help
