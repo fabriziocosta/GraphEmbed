@@ -33,11 +33,11 @@ Options:
   -m N, --min_threshold=N           Min num of elements per class [default: 5].
   --cmap_name=NAME                  Color scheme [default: gist_ncar].
   --correlation_transformation      Convert data matrix to corr coeff matrix.
-  --nearest_neighbors_threshold=N   Number of neighbors [default: 5].
+  --nearest_neighbors_threshold=N   Number of neighbors [default: 3].
   --true_class_bias=N               Bias for clustering [default: 0.9].
-  --true_class_threshold=N          Threshold for clusters [default: 3].
+  --true_class_threshold=N          Threshold for clusters [default: 2].
   --multi_class_bias=N              Multiclass bias [default: 0].
-  --multi_class_threshold=N         Multiclass threshold [default: 3].
+  --multi_class_threshold=N         Multiclass threshold [default: 2].
   -h --help                         Show this screen.
   --version                         Show version.
   --verbose                         Print more text.
@@ -247,13 +247,13 @@ def main(args):
             data_matrix=_data_matrix, target=y)
         embedder.display(target_dict=target_dict, display=display,
                          display_class_graph=True, display_clean=True,
-                         cmap=cmap_name, file_name=file_name, figure_size=11)
+                         cmap=cmap_name, file_name=file_name, figure_size=15)
     else:
         data_matrix = embedder.fit_transform(
             data_matrix=_data_matrix, n_clusters=n_clusters)
         embedder.display(display=display,
                          display_class_graph=True, display_clean=True,
-                         cmap=cmap_name, file_name=file_name, figure_size=11)
+                         cmap=cmap_name, file_name=file_name, figure_size=15)
     # write prediction files
     out_fname = file_name + '_2D_coords.txt'
     logger.info('Writing 2D coordinates to file: %s' % out_fname)
