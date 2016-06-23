@@ -1,6 +1,3 @@
-<p align="center"><img src="img/img.png"></p>
-
-
 # GraphEmbed
 Compute a 2D embedding of a data matrix given supervised class information.
 
@@ -10,6 +7,9 @@ supervised classes and instances are linked to their respective classes.
 The final embedding is obtained using the spring layout algorithm presented in:
 Tomihisa Kamada, and Satoru Kawai. "An algorithm for drawing general
 undirected graphs." Information processing letters 31, no. 1 (1989): 7-15.
+
+<p align="center"><img src="img/img.png"></p>
+
 
 
 ## Usage
