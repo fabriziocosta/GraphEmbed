@@ -1,4 +1,4 @@
-<p align="center"><img src="img.png"></p>
+<p align="center"><img src="img/img.png"></p>
 
 
 # GraphEmbed
@@ -77,3 +77,11 @@ Options:
   --verbose                         Print more text.
 
   ```
+  
+## Sample output pdf files
+  
+<p align="center"><img src="img/img_1_clean.png"></p>
+<p align="center"><img src="img/img_2_clean_hull.png"></p>
+<p align="center"><img src="img/img_3.png"></p>
+<p align="center"><img src="img/img_4_target.png"></p>
+
