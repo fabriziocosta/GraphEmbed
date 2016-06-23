@@ -18,7 +18,6 @@ from numpy.linalg import inv
 
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.preprocessing import OneHotEncoder
-from sklearn.preprocessing import scale
 from sklearn.metrics.pairwise import pairwise_kernels
 from sklearn.linear_model import LogisticRegression
 from sklearn.cross_validation import StratifiedKFold
@@ -60,16 +59,11 @@ class KKEmbedder(BaseEstimator, ClassifierMixin):
     undirected graphs." Information processing letters 31, no. 1 (1989): 7-15.
     """
 
-    def __init__(self, stop_eps=1, n_iter=20, k=1, power=2,
-                 length_attribute='len', uncertainty_attribute='None',
+    def __init__(self, stop_eps=1, n_iter=20,
                  init_pos=None):
         """Constructor."""
         self.stop_eps = stop_eps
         self.n_iter = n_iter
-        self.k = k
-        self.power = power
-        self.length_attribute = length_attribute
-        self.uncertainty_attribute = uncertainty_attribute
         self.init_pos = init_pos
         self.dms = []
 
@@ -107,8 +101,8 @@ class KKEmbedder(BaseEstimator, ClassifierMixin):
                 xmi2 = xmi * xmi
                 ymi2 = ymi * ymi
                 xmi_ymi2 = xmi2 + ymi2
-                kmi = weights[m][i]
                 lmi = lengths[m][i]
+                kmi = weights[m][i] / (lmi * lmi)
                 dEx += kmi * (xmi - (lmi * xmi) / math.sqrt(xmi_ymi2))
                 dEy += kmi * (ymi - (lmi * ymi) / math.sqrt(xmi_ymi2))
                 d2Ex2 += kmi * (1 - (lmi * ymi2) / math.pow(xmi_ymi2, 1.5))
@@ -128,8 +122,8 @@ class KKEmbedder(BaseEstimator, ClassifierMixin):
                 xmi2 = xmi * xmi
                 ymi2 = ymi * ymi
                 xmi_ymi2 = xmi2 + ymi2
-                kmi = weights[m][i]
                 lmi = lengths[m][i]
+                kmi = weights[m][i] / (lmi * lmi)
                 dEx += kmi * (xmi - (lmi * xmi) / math.sqrt(xmi_ymi2))
                 dEy += kmi * (ymi - (lmi * ymi) / math.sqrt(xmi_ymi2))
         return math.sqrt(dEx * dEx + dEy * dEy)
@@ -159,29 +153,17 @@ class KKEmbedder(BaseEstimator, ClassifierMixin):
         pos[m][1] += dy
         return m
 
-    def _len2weight(self, lengths, k=1, power=2):
-        weights = {}
-        for i in lengths:
-            weight = {}
-            for j in lengths[i]:
-                if lengths[i][j] != 0:
-                    weight[j] = float(k) / math.pow(lengths[i][j], power)
-                else:
-                    weight[j] = 0
-            weights[i] = weight
-        return weights
-
-    def _scale(self, pos):
-        _min = -1
-        _max = 1
+    def _scale(self, init_pos):
+        _min = -0.5
+        _max = 0.5
         pos = dict()
-        max_x = max([self.init_pos[id][0] for id in self.init_pos])
-        min_x = min([self.init_pos[id][0] for id in self.init_pos])
-        max_y = max([self.init_pos[id][1] for id in self.init_pos])
-        min_y = min([self.init_pos[id][1] for id in self.init_pos])
-        for id in self.init_pos:
-            x = self.init_pos[id][0]
-            y = self.init_pos[id][1]
+        max_x = max([init_pos[id][0] for id in init_pos])
+        min_x = min([init_pos[id][0] for id in init_pos])
+        max_y = max([init_pos[id][1] for id in init_pos])
+        min_y = min([init_pos[id][1] for id in init_pos])
+        for id in init_pos:
+            x = init_pos[id][0]
+            y = init_pos[id][1]
             # standardize
             x = (x - min_x) / (max_x - min_x)
             y = (y - min_y) / (max_y - min_y)
@@ -191,17 +173,18 @@ class KKEmbedder(BaseEstimator, ClassifierMixin):
             pos[id] = np.array([x, y])
         return pos
 
-    def transform(self, graph):
+    def _compute_weights(self, graph):
+        weights = np.ones((len(graph), len(graph)))
+        for u, v in graph.edges():
+            val = graph.edge[u][v].get('weight', 1)
+            weights[u][v] = val
+        return weights
+
+    def transform(self, graph, normalize=True):
         """Transform."""
-        lengths = self._compute_all_pairs(graph,
-                                          weight=self.length_attribute,
-                                          normalize=True)
-        if self.uncertainty_attribute is None:
-            weights = self._len2weight(lengths, k=self.k, power=self.power)
-        else:
-            weights = self._compute_all_pairs(graph,
-                                              weight=self.uncertainty_attribute)
-            weights = self._len2weight(weights, k=self.k, power=self.power)
+        lengths = self._compute_all_pairs(graph, weight='len',
+                                          normalize=normalize)
+        weights = self._compute_weights(graph)
         if self.init_pos is None:
             pos = self._compute_initial_pos(graph)
         else:
@@ -232,11 +215,11 @@ class Embedder(object):
 
     def __init__(self,
                  quick_shift_threshold=None,
-                 nearest_neighbors_threshold=4,
-                 true_class_bias=0.9,
-                 true_class_threshold=0.005,
-                 multi_class_bias=0.75,
-                 multi_class_threshold=0.001,
+                 nearest_neighbors_threshold=5,
+                 true_class_bias=.87,
+                 true_class_threshold=3,
+                 multi_class_bias=0,
+                 multi_class_threshold=3,
                  random_state=1,
                  metric='rbf', **kwds):
         """Constructor."""
@@ -303,6 +286,7 @@ class Embedder(object):
 
     def estimate_probability_distribution(self, data_matrix=None, target=None):
         """Estimate probability distribution of each instance."""
+        self.target = target
         lr = LogisticRegression()
         skf = StratifiedKFold(target, n_folds=5)
         results = []
@@ -324,14 +308,12 @@ class Embedder(object):
             data_matrix=data_matrix, target=target)
         return self
 
-    def fit_transform(self, data_matrix=None, target=None, fast=False):
+    def fit_transform(self, data_matrix=None, target=None):
         """fit_transform."""
         self.fit(data_matrix=data_matrix, target=target)
-        return self.transform(data_matrix=data_matrix,
-                              target=target,
-                              fast=fast)
+        return self.transform(data_matrix=data_matrix, target=target)
 
-    def transform(self, data_matrix=None, target=None, fast=False):
+    def transform(self, data_matrix=None, target=None):
         """transform."""
         instance_graph = self.build_instance_graph(
             data_matrix=data_matrix,
@@ -340,15 +322,13 @@ class Embedder(object):
             quick_shift_threshold=self.quick_shift_threshold,
             nearest_neighbors_threshold=self.nearest_neighbors_threshold)
         class_graph = self.build_class_graph(instance_graph)
-        self.filter_edges(
-            class_graph, true_class_threshold=self.true_class_threshold)
         union_graph = self.combine_graphs(
             class_graph=class_graph,
             instance_graph=instance_graph,
             true_class_bias=self.true_class_bias,
             multi_class_bias=self.multi_class_bias,
             multi_class_threshold=self.multi_class_threshold)
-        self.annotate_graph_with_KK_layout(union_graph, fast=fast)
+        self.annotate_graph_with_graphviz_layout(union_graph)
         self.remove_class_nodes(union_graph)
         embedded_data_matrix = [union_graph.node[v]['pos']
                                 for v in union_graph.nodes()]
@@ -362,36 +342,11 @@ class Embedder(object):
 
     def display(self, target_dict=None, true_target=None,
                 display_hull=True, remove_outer_layer=False,
-                display=True,
+                display=True, display_only_clean=False,
                 display_clean=False, display_class_graph=False,
                 file_name='', cmap='rainbow', figure_size=9):
         """Display."""
-        if display_class_graph:
-            self.annotate_graph_with_KK_layout(self.class_graph)
-            self.display_graph(
-                self.class_graph,
-                target_dict=target_dict,
-                display_label=True,
-                display_hull=False,
-                edge_thickness=40,
-                cmap=cmap,
-                figure_size=figure_size,
-                node_size=700,
-                file_name=file_name + '_class.pdf')
-        if display_clean:
-            if display_hull:
-                self.display_graph(
-                    self.union_graph,
-                    target_dict=target_dict,
-                    true_target=true_target,
-                    display_hull=True,
-                    remove_outer_layer=remove_outer_layer,
-                    cmap=cmap,
-                    figure_size=figure_size,
-                    node_size=40,
-                    display_average_class_link=False,
-                    display_edge=False,
-                    file_name=file_name + '_clean_hull.pdf')
+        if display_only_clean:
             self.display_graph(
                 self.union_graph,
                 target_dict=target_dict,
@@ -402,21 +357,56 @@ class Embedder(object):
                 node_size=40,
                 display_average_class_link=False,
                 display_edge=False,
-                file_name=file_name + '_clean.pdf')
-        self.display_graph(
-            self.union_graph,
-            target_dict=target_dict,
-            true_target=true_target,
-            edge_thickness=30,
-            edge_width_threshold=.03,
-            display_hull=display_hull,
-            remove_outer_layer=remove_outer_layer,
-            figure_size=figure_size,
-            cmap=cmap,
-            node_size=40,
-            display_average_class_link=True,
-            display_label=False,
-            file_name=file_name + '.pdf')
+                file_name=file_name + '_1_clean.pdf')
+        else:
+            if display_clean:
+                self.display_graph(
+                    self.union_graph,
+                    target_dict=target_dict,
+                    true_target=true_target,
+                    display_hull=False,
+                    figure_size=figure_size,
+                    cmap=cmap,
+                    node_size=40,
+                    display_average_class_link=False,
+                    display_edge=False,
+                    file_name=file_name + '_1_clean.pdf')
+                if display_hull:
+                    self.display_graph(
+                        self.union_graph,
+                        target_dict=target_dict,
+                        true_target=true_target,
+                        display_hull=True,
+                        remove_outer_layer=remove_outer_layer,
+                        cmap=cmap,
+                        figure_size=figure_size,
+                        node_size=40,
+                        display_average_class_link=False,
+                        display_edge=False,
+                        file_name=file_name + '_2_clean_hull.pdf')
+            self.display_graph(
+                self.union_graph,
+                target_dict=target_dict,
+                true_target=true_target,
+                display_hull=display_hull,
+                remove_outer_layer=remove_outer_layer,
+                figure_size=figure_size,
+                cmap=cmap,
+                node_size=40,
+                display_average_class_link=True,
+                display_label=False,
+                file_name=file_name + '_3.pdf')
+            if display_class_graph:
+                self.display_graph(
+                    self.union_graph,
+                    target_dict=target_dict,
+                    display_only_class=True,
+                    display_label=True,
+                    display_hull=False,
+                    cmap=cmap,
+                    figure_size=figure_size,
+                    node_size=700,
+                    file_name=file_name + '_4_target.pdf')
         if display:
             plt.show()
 
@@ -493,49 +483,25 @@ class Embedder(object):
                     graph.add_edge(
                         id_group, i,
                         weight=average_probability,
-                        len=self._weigth_to_len(average_probability))
+                        len=self._prob_to_len(average_probability))
+        self._filter_knn_edges(
+            graph, knn_threshold=self.true_class_threshold)
         return graph
-
-    def filter_edges(self, graph, true_class_threshold=0.1):
-        """Filter edges."""
-        edges = graph.edges()
-        for u, v in edges:
-            if graph.edge[u][v]['weight'] < true_class_threshold:
-                graph.remove_edge(u, v)
 
     def _filter_knn_edges(self, graph, knn_threshold=2):
         surviving_edges = []
         for u in graph.nodes():
             vs = graph.neighbors(u)
-            for w, v in sorted([(graph[u][v]['weight'], v) for v in vs], reverse=True)[:knn_threshold]:
+            sorted_edges = sorted(
+                [(graph[u][v]['weight'], v) for v in vs], reverse=True)
+            for w, v in sorted_edges[:knn_threshold]:
                 surviving_edges.append((u, v))
+                surviving_edges.append((v, u))
         surviving_edges = set(surviving_edges)
         edges = graph.edges()
         for u, v in edges:
-            if (u, v) in surviving_edges:
-                pass
-            else:
+            if (u, v) not in surviving_edges:
                 graph.remove_edge(u, v)
-
-    def multiply_edge_weight(self, graph, edge_weight_factor=10):
-        """Filter edges."""
-        edges = graph.edges()
-        for u, v in edges:
-            weight = graph.edge[u][v]['weight'] * edge_weight_factor
-            graph.edge[u][v]['weight'] = weight
-
-    def set_edge_weight(self, graph, edge_weight=1):
-        """Filter edges."""
-        edges = graph.edges()
-        for u, v in edges:
-            graph.edge[u][v]['weight'] = edge_weight
-
-    def multiply_edge_length(self, graph, edge_length_factor=10):
-        """Filter edges."""
-        edges = graph.edges()
-        for u, v in edges:
-            length = graph.edge[u][v]['len'] * edge_length_factor
-            graph.edge[u][v]['len'] = length
 
     def combine_graphs(self, true_class_bias=1,
                        multi_class_bias=0, multi_class_threshold=0,
@@ -549,23 +515,26 @@ class Embedder(object):
             nx.relabel_nodes(class_graph, lambda x: x + id_offset)
         union_graph = nx.union(instance_graph, offset_pred_graph)
 
-        if multi_class_bias != 0:
+        mcb = multi_class_bias
+        if mcb != 0:
+            # add links from each instance to the class nodes
+            # with a length inversely proportional to the prob
             for u in instance_graph.nodes():
+                # find k-th largest prob value (k=multi_class_threshold)
+                # and instantiate only the k most probable edges
+                th = sorted(probs[u], reverse=True)[multi_class_threshold]
                 for group, prob in enumerate(probs[u]):
-                    if prob >= multi_class_threshold:
+                    if prob >= th:
                         group_id = group + id_offset
-                        weight = prob * multi_class_bias
-                        union_graph.add_edge(
-                            u, group_id,
-                            weight=weight,
-                            len=self._weigth_to_len(weight))
+                        length = (1 - mcb) * self._prob_to_len(prob)
+                        union_graph.add_edge(u, group_id, len=length)
 
         if true_class_bias != 0:
+            # add links from each instance to its assigned class
             for u in instance_graph.nodes():
                 group_id = instance_graph.node[u]['group'] + id_offset
                 union_graph.add_edge(u, group_id,
-                                     weight=true_class_bias,
-                                     len=self._weigth_to_len(true_class_bias))
+                                     len=1 - true_class_bias)
 
         return union_graph
 
@@ -612,11 +581,10 @@ class Embedder(object):
         if fast:
             layout_pos = init_pos
         else:
-            layout_pos = KKEmbedder(init_pos=init_pos,
-                                    stop_eps=stop_eps,
-                                    n_iter=n_iter,
-                                    k=k,
-                                    power=2).transform(graph)
+            layout_pos = KKEmbedder(
+                init_pos=init_pos,
+                stop_eps=stop_eps,
+                n_iter=n_iter).transform(graph, normalize=False)
         # annotate nodes with positional information
         for v in graph.nodes():
             # check that no NaN is assigned as a coordinate
@@ -695,73 +663,14 @@ class Embedder(object):
     def display_graph(self, graph, target_dict=None, true_target=None,
                       display_label=False, display_edge=True,
                       display_average_class_link=False,
+                      display_only_class=False,
                       display_hull=True, remove_outer_layer=False,
-                      edge_thickness=20, edge_width_threshold=0.2,
+                      edge_thickness=40,
                       cmap='gist_ncar', node_size=600, figure_size=15,
                       file_name=''):
         """Display graph."""
-        if target_dict is None:
-            target_dict = {i: i for i in set(self.target)}
         fig, ax = plt.subplots(figsize=(int(1 * figure_size), figure_size))
-        if display_hull:
-            patches = []
-            for points in self._convex_hull(
-                    self.embedded_data_matrix, self.target,
-                    remove_outer_layer=remove_outer_layer):
-                polygon = Polygon(points)
-                patches.append(polygon)
-            p = PatchCollection(patches, cmap=plt.get_cmap(cmap), alpha=0.2)
-            p.set_array(np.array(range(len(set(self.target)))))
-            ax.add_collection(p)
-        layout_pos = self._get_node_layout_positions(graph)
-        if true_target is not None:
-            codes = true_target
-        else:
-            codes = np.array([graph.node[u]['group'] for u in graph.nodes()])
-        instance_cols = self._get_node_colors(codes, cmap=cmap)
-        if display_label:
-            node_label_dict = {u: target_dict[u] for u in graph.nodes()}
-            nx.draw_networkx_labels(graph, layout_pos, node_label_dict,
-                                    font_size=14, font_weight='black',
-                                    font_color='w')
-            nx.draw_networkx_labels(graph, layout_pos, node_label_dict,
-                                    font_size=14, font_weight='light',
-                                    font_color='k')
-        nx.draw_networkx_nodes(graph, layout_pos,
-                               node_color=instance_cols,
-                               cmap=cmap, node_size=node_size,
-                               linewidths=1)
-        if display_average_class_link is False:
-            if display_edge:
-                # generic edge
-                edges = [(u, v) for u, v in graph.edges()
-                         if graph[u][v].get('type', '') == '']
-                widths = [graph[u][v]['weight'] * edge_thickness
-                          for u, v in edges]
-                if edges and widths:
-                    nx.draw_networkx_edges(
-                        graph, layout_pos, edges=edges, alpha=0.5,
-                        width=widths, edge_color='cornflowerblue')
-                # knn edges
-                knn_edges = [(u, v) for u, v in graph.edges()
-                             if graph[u][v].get('type', '') == 'knn']
-                knn_widths = [graph[u][v]['weight'] * edge_thickness
-                              for u, v in knn_edges]
-                if knn_edges and knn_widths:
-                    nx.draw_networkx_edges(
-                        graph, layout_pos, edges=knn_edges, alpha=0.5,
-                        width=knn_widths, edge_color='cornflowerblue')
-                # shift edges
-                shift_edges = [(u, v) for u, v in graph.edges()
-                               if graph[u][v].get('type', '') == 'shift']
-                shift_widths = [graph[u][v]['weight'] * edge_thickness
-                                for u, v in shift_edges]
-                if shift_edges and shift_widths:
-                    nx.draw_networkx_edges(
-                        graph, layout_pos, edges=shift_edges, alpha=0.9,
-                        width=shift_widths, edge_color='cornflowerblue')
-
-        else:
+        if display_only_class:
             # rebuild the class graph
             average_graph = self.build_class_graph(graph)
             # add edges between average class
@@ -780,11 +689,8 @@ class Embedder(object):
                 average_graph.node[id]['pos'] = coords
 
             # display edges only
-            # edges = average_graph.edges()
-            # for u, v in edges:
-            #    if average_graph[u][v]['weight'] < edge_width_threshold:
-            #        average_graph.remove_edge(u, v)
-            self._filter_knn_edges(average_graph, knn_threshold=2)
+            self._filter_knn_edges(average_graph,
+                                   knn_threshold=self.true_class_threshold)
 
             edges = average_graph.edges()
             widths = [average_graph[u][v]['weight'] * edge_thickness
@@ -792,18 +698,124 @@ class Embedder(object):
             layout_pos = self._get_node_layout_positions(average_graph)
             nx.draw_networkx_edges(average_graph, layout_pos, edges=edges,
                                    width=widths, edge_color='cornflowerblue')
+            codes = np.array([average_graph.node[u]['group']
+                              for u in average_graph.nodes()])
+            instance_cols = self._get_node_colors(codes, cmap=cmap)
+            nx.draw_networkx_nodes(average_graph, layout_pos,
+                                   node_color=instance_cols,
+                                   cmap=cmap, node_size=node_size,
+                                   linewidths=1)
             nx.draw_networkx_labels(average_graph, layout_pos, node_label_dict,
                                     font_size=18, font_weight='black',
                                     font_color='w')
             nx.draw_networkx_labels(average_graph, layout_pos, node_label_dict,
                                     font_size=18, font_weight='light',
                                     font_color='k')
+        else:
+            if target_dict is None:
+                target_dict = {i: i for i in set(self.target)}
+            if display_hull:
+                patches = []
+                for points in self._convex_hull(
+                        self.embedded_data_matrix, self.target,
+                        remove_outer_layer=remove_outer_layer):
+                    polygon = Polygon(points)
+                    patches.append(polygon)
+                p = PatchCollection(patches, cmap=plt.get_cmap(cmap), alpha=0.2)
+                p.set_array(np.array(range(len(set(self.target)))))
+                ax.add_collection(p)
+            layout_pos = self._get_node_layout_positions(graph)
+            if true_target is not None:
+                codes = true_target
+            else:
+                codes = np.array([graph.node[u]['group'] for u in graph.nodes()])
+            instance_cols = self._get_node_colors(codes, cmap=cmap)
+            if display_label:
+                node_label_dict = {u: target_dict[u] for u in graph.nodes()}
+                nx.draw_networkx_labels(graph, layout_pos, node_label_dict,
+                                        font_size=14, font_weight='black',
+                                        font_color='w')
+                nx.draw_networkx_labels(graph, layout_pos, node_label_dict,
+                                        font_size=14, font_weight='light',
+                                        font_color='k')
+            nx.draw_networkx_nodes(graph, layout_pos,
+                                   node_color=instance_cols,
+                                   cmap=cmap, node_size=node_size,
+                                   linewidths=1)
+            if display_average_class_link is False:
+                if display_edge:
+                    # generic edge
+                    edges = [(u, v) for u, v in graph.edges()
+                             if graph[u][v].get('type', '') == '']
+                    widths = [graph[u][v]['weight'] * edge_thickness
+                              for u, v in edges]
+                    if edges and widths:
+                        nx.draw_networkx_edges(
+                            graph, layout_pos, edges=edges, alpha=0.5,
+                            width=widths, edge_color='cornflowerblue')
+                    # knn edges
+                    knn_edges = [(u, v) for u, v in graph.edges()
+                                 if graph[u][v].get('type', '') == 'knn']
+                    knn_widths = [graph[u][v]['weight'] * edge_thickness
+                                  for u, v in knn_edges]
+                    if knn_edges and knn_widths:
+                        nx.draw_networkx_edges(
+                            graph, layout_pos, edges=knn_edges, alpha=0.5,
+                            width=knn_widths, edge_color='cornflowerblue')
+                    # shift edges
+                    shift_edges = [(u, v) for u, v in graph.edges()
+                                   if graph[u][v].get('type', '') == 'shift']
+                    shift_widths = [graph[u][v]['weight'] * edge_thickness
+                                    for u, v in shift_edges]
+                    if shift_edges and shift_widths:
+                        nx.draw_networkx_edges(
+                            graph, layout_pos, edges=shift_edges, alpha=0.9,
+                            width=shift_widths, edge_color='cornflowerblue')
+
+            else:
+                # rebuild the class graph
+                average_graph = self.build_class_graph(graph)
+                # add edges between average class
+                # find cluster centers in current graph
+                group_coords = defaultdict(list)
+                node_label_dict = dict()
+                ids = graph.nodes()
+                for id in ids:
+                    group_id = graph.node[id]['group']
+                    group_coords[group_id].append(graph.node[id]['pos'])
+                for id in group_coords:
+                    group_id = average_graph.node[id]['group']
+                    node_label_dict[id] = target_dict[group_id]
+                    coordinate_matrix = np.vstack(group_coords[id])
+                    coords = np.mean(coordinate_matrix, axis=0)
+                    average_graph.node[id]['pos'] = coords
+
+                # display edges only
+                self._filter_knn_edges(average_graph,
+                                       knn_threshold=self.true_class_threshold)
+
+                edges = average_graph.edges()
+                widths = [average_graph[u][v]['weight'] * edge_thickness
+                          for u, v in edges]
+                layout_pos = self._get_node_layout_positions(average_graph)
+                nx.draw_networkx_edges(average_graph, layout_pos, edges=edges,
+                                       width=widths, edge_color='cornflowerblue')
+                nx.draw_networkx_labels(average_graph, layout_pos, node_label_dict,
+                                        font_size=18, font_weight='black',
+                                        font_color='w')
+                nx.draw_networkx_labels(average_graph, layout_pos, node_label_dict,
+                                        font_size=18, font_weight='light',
+                                        font_color='k')
         plt.xticks([])
         plt.yticks([])
         plt.axis('off')
         plt.draw()
         if file_name:
             plt.savefig(file_name, bbox_inches='tight', transparent=True, pad_inches=0)
+
+    def _prob_to_len(self, val):
+        assert(0 <= val <= 1)
+        return 1 - val
 
     def _weigth_to_len(self, val):
         _minimal_val_ = 0.01
@@ -814,21 +826,25 @@ class Embedder(object):
         # length = math.sqrt(- math.log(val))
         return length
 
-    def _distance_to_weigth(self, dist):
-        _minimal_val_ = 0.01
-        return 1 / (dist + _minimal_val_)
+    def _diameter(self, data_matrix):
+        curr_point = data_matrix[0]
+        for itera in range(3):
+            # find furthest point from curr_point
+            id = np.argmax(np.array([np.linalg.norm(point - curr_point)
+                                     for point in data_matrix]))
+            curr_point = data_matrix[id]
+        return max([np.linalg.norm(point - curr_point)
+                    for point in data_matrix])
 
     def _add_distance_to_edges(self, graph, data_matrix):
-        _minimal_dist_ = 0.01
+        _max_dist = self._diameter(data_matrix)
         for src_id, dest_id in graph.edges():
             if src_id != dest_id:
-                dist = np.linalg.norm(
-                    data_matrix[src_id] - data_matrix[dest_id])
-                if dist <= 0:
-                    dist = _minimal_dist_
-                graph[src_id][dest_id]['len'] = dist
-                graph[src_id][dest_id]['weight'] = \
-                    self._distance_to_weigth(dist)
+                px = data_matrix[src_id]
+                pz = data_matrix[dest_id]
+                dist = np.linalg.norm(px - pz)
+                graph[src_id][dest_id]['len'] = dist / _max_dist
+                graph[src_id][dest_id]['weight'] = 1
         return graph
 
     def _kernel_shift_links(self, kernel_matrix=None,
@@ -864,18 +880,8 @@ class Embedder(object):
         size = kernel_matrix.shape[0]
         for i in range(size):
             # add edges to the knns
-            for jj in range(nearest_neighbors_threshold):
+            for jj in range(1, nearest_neighbors_threshold + 1):
                 j = kernel_matrix_sorted_ids[i, jj]
                 if i != j:
                     graph.add_edge(i, j, type='knn')
         return graph
-
-    def _graph_layout(self, graph):
-        two_dimensional_data_matrix = \
-            nx.graphviz_layout(graph,
-                               prog=self.layout_prog,
-                               args=self.layout_prog_args)
-        two_dimensional_data_list = [list(two_dimensional_data_matrix[i])
-                                     for i in range(len(graph))]
-        embedded_data_matrix = scale(np.array(two_dimensional_data_list))
-        return embedded_data_matrix
