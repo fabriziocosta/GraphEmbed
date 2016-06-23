@@ -27,7 +27,7 @@ Standalone script usage:
 
 ## Output
 
-Seven files are produced:
+The following files are produced:
 
 ```
 fname_2D_coords.txt      The 2D coordinates, one line per instance
