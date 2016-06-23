@@ -59,7 +59,7 @@ Options:
   -i FILE                           Specify input data file.
   -t FILE                           Specify target data file.
   -n N                              Specify the num of classes [default: 1].
-  -o NAME                           Prefix for output files [default: image].
+  -o NAME                           Prefix for output files [default: out].
   --display                         Display graphs.
   -m N, --min_threshold=N           Min num of elements per class [default: 5].
   --cmap_name=NAME                  Color scheme [default: gist_ncar].
