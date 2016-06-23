@@ -24,6 +24,21 @@ Standalone script usage:
 ```./graph_embed -i data.csv -t target.csv --correlation_transformation --true_class_bias .95 --multi_class_bias .8```
 
 
+## Output
+
+Seven files are produced:
+
+```
+fname_2D_coords.txt      The 2D coordinates, one line per instance
+fname_target.txt         The target identifier (given or predicted), one line per instance 
+fname_probs.txt          The probability of each instance to belong to one of the targets, one line per instance.
+
+fname_1_clean.pdf        The image of the 2D embedding.
+fname_2_clean_hull.pdf   The image of the 2D embedding with convex hulls.
+fname_3.pdf              The image of the 2D embedding with convex hulls and target info.
+fname_4_target.pdf       The image of the 2D embeddingof the targets.
+```
+
 ## Help
 
 ```
