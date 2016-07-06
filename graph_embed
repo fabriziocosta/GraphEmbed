@@ -110,7 +110,7 @@ def configure_logging(logger, verbosity=0, filename=None):
 
 
 def _load_data_matrix(fname):
-    print('Reading data from file: %s' % fname)
+    logger.info('Reading data from file: %s' % fname)
     data_matrix_original = []
     instance_names = []
     gene_names = []
@@ -133,11 +133,9 @@ def _load_data_matrix(fname):
 def _load_target(fname):
     logger.info('Reading data from file: %s' % fname)
     targets = []
-    instance_names = []
     with open(fname) as f:
-        for i, line in enumerate(f):
+        for line in f:
             tokens = line.strip().split()
-            instance_names.append(tokens[0])
             targets.append(tokens[1])
     logger.info('read %d values ' % len(targets))
     target_names = list(sorted(set(targets)))
@@ -157,9 +155,8 @@ def _select_targets(y, min_threshold=10, max_threshold=None):
     y_sel = []
     for y_id in c:
         if c[y_id] > min_threshold:
-            if max_threshold:
-                if c[y_id] < max_threshold:
-                    y_sel.append(y_id)
+            if max_threshold and c[y_id] < max_threshold:
+                y_sel.append(y_id)
             else:
                 y_sel.append(y_id)
     return y_sel
@@ -220,7 +217,6 @@ def main(args):
         target_dict = dict()
         for i, c in enumerate(lenc.classes_):
             target_dict[i] = target_names[c]
-            print '%d -> %d   %s' % (i, c, target_names[c])
 
     # prepare data matrix
     if correlation_transformation:
