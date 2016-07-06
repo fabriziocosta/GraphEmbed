@@ -10,7 +10,13 @@ undirected graphs." Information processing letters 31, no. 1 (1989): 7-15.
 
 <p align="center"><img src="img/img.png"></p>
 
+## Installation
 
+GraphEmbed can be installed via [conda](http://conda.pydata.org/miniconda.html):
+
+```bash
+conda install graph_embed -c bioconda
+```
 
 ## Usage
 
