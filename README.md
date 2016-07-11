@@ -45,7 +45,7 @@ fname_probs.txt          The probability of each instance to belong to one of th
 fname_1_clean.pdf        The image of the 2D embedding.
 fname_2_clean_hull.pdf   The image of the 2D embedding with convex hulls.
 fname_3.pdf              The image of the 2D embedding with convex hulls and target info.
-fname_4_target.pdf       The image of the 2D embeddingof the targets.
+fname_4_target.pdf       The image of the 2D embedding of the targets.
 ```
 
 ## Help
@@ -85,9 +85,16 @@ Options:
   ```
   
 ## Sample output pdf files
-  
+
+The image of the 2D embedding.
 <p align="center"><img src="img/img_1_clean.png"></p>
+
+The image of the 2D embedding with convex hulls.
 <p align="center"><img src="img/img_2_clean_hull.png"></p>
+
+The image of the 2D embedding with convex hulls and target info.
 <p align="center"><img src="img/img_3.png"></p>
+
+The image of the 2D embedding of the targets.
 <p align="center"><img src="img/img_4_target.png"></p>
 
