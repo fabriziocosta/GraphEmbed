@@ -22,15 +22,15 @@ conda install graph_embed -c bioconda
 
 You can execute the program by typing:
 
-```./graph_embed -i data.csv -t target.csv --correlation_transformation```
+```graph_embed -i data.csv -t target.csv --correlation_transformation```
 
 If you want the program to cluster data on its own rather than relying on external information about the classes you need to specify the number of desired classes:
 
-```./graph_embed -i data.csv -n 7 ```
+```graph_embed -i data.csv -n 7 ```
 
 You can change the strength of the belief in the clusters. Values closer to 1 (e.g. 0.9 or 0.95) indicate a stronger belief and will result in more compact layouts.
 
-```./graph_embed -i data.csv -t target.csv --correlation_transformation --true_class_bias .95 --multi_class_bias .8```
+```graph_embed -i data.csv -t target.csv --correlation_transformation --true_class_bias .95 --multi_class_bias .8```
 
 
 ## Output
