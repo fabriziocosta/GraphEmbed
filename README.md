@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.59227.svg)](http://dx.doi.org/10.5281/zenodo.59227)
+
 # GraphEmbed
 Compute a 2D embedding of a data matrix given supervised class information.
 
