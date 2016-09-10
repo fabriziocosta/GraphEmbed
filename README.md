@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.59227.svg)](http://dx.doi.org/10.5281/zenodo.59227)
+
 # GraphEmbed
 Compute a 2D embedding of a data matrix given supervised class information.
 
@@ -10,21 +12,27 @@ undirected graphs." Information processing letters 31, no. 1 (1989): 7-15.
 
 <p align="center"><img src="img/img.png"></p>
 
+## Installation
 
+GraphEmbed can be installed via [conda](http://conda.pydata.org/miniconda.html):
+
+```bash
+conda install graph_embed -c bioconda
+```
 
 ## Usage
 
 You can execute the program by typing:
 
-```./graph_embed -i data.csv -t target.csv --correlation_transformation```
+```graph_embed -i data.csv -t target.csv --correlation_transformation```
 
 If you want the program to cluster data on its own rather than relying on external information about the classes you need to specify the number of desired classes:
 
-```./graph_embed -i data.csv -n 7 ```
+```graph_embed -i data.csv -n 7 ```
 
 You can change the strength of the belief in the clusters. Values closer to 1 (e.g. 0.9 or 0.95) indicate a stronger belief and will result in more compact layouts.
 
-```./graph_embed -i data.csv -t target.csv --correlation_transformation --true_class_bias .95 --multi_class_bias .8```
+```graph_embed -i data.csv -t target.csv --correlation_transformation --true_class_bias .95 --multi_class_bias .8```
 
 
 ## Output
@@ -39,7 +47,7 @@ fname_probs.txt          The probability of each instance to belong to one of th
 fname_1_clean.pdf        The image of the 2D embedding.
 fname_2_clean_hull.pdf   The image of the 2D embedding with convex hulls.
 fname_3.pdf              The image of the 2D embedding with convex hulls and target info.
-fname_4_target.pdf       The image of the 2D embeddingof the targets.
+fname_4_target.pdf       The image of the 2D embedding of the targets.
 ```
 
 ## Help
@@ -79,9 +87,16 @@ Options:
   ```
   
 ## Sample output pdf files
-  
+
+The image of the 2D embedding.
 <p align="center"><img src="img/img_1_clean.png"></p>
+
+The image of the 2D embedding with convex hulls.
 <p align="center"><img src="img/img_2_clean_hull.png"></p>
+
+The image of the 2D embedding with convex hulls and target info.
 <p align="center"><img src="img/img_3.png"></p>
+
+The image of the 2D embedding of the targets.
 <p align="center"><img src="img/img_4_target.png"></p>
 
