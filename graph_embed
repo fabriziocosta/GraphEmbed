@@ -11,15 +11,15 @@ The final embedding is obtained using the spring layout algorithm presented in:
 Tomihisa Kamada, and Satoru Kawai. "An algorithm for drawing general
 undirected graphs." Information processing letters 31, no. 1 (1989): 7-15.
 
-Version: 1.0
+Version: 2.0
 Author: Fabrizio Costa [costa@informatik.uni-freiburg.de]
 
 Usage:
   graph_embed -i FILE (-t FILE | -n N)  [-o NAME] [--cmap_name=NAME]
-              [(-m N | --min_threshold=N)] [--multi_class_threshold=N]
-              [--multi_class_bias=N] [--true_class_threshold=N]
-              [--true_class_bias=N] [--nearest_neighbors_threshold=N]
+              [--knn=N] [--k_quick_shift=N] [--knn_outlier=N]
+              [--class_bias=N]
               [--correlation_transformation]
+              [--min_threshold=N] [--max_threshold=N]
               [--display] [--verbose]
   graph_embed (-h | --help)
   graph_embed --version
@@ -27,17 +27,16 @@ Usage:
 Options:
   -i FILE                           Specify input data file.
   -t FILE                           Specify target data file.
-  -n N                              Specify the num of classes [default: 1].
+  --min_threshold=N                 Min num instances per class [default: 5]
+  --max_threshold=N                 Max num instances per class [default: 1000]
   -o NAME                           Prefix for output files [default: out].
-  --display                         Display graphs.
-  -m N, --min_threshold=N           Min num of elements per class [default: 5].
-  --cmap_name=NAME                  Color scheme [default: gist_ncar].
   --correlation_transformation      Convert data matrix to corr coeff matrix.
-  --nearest_neighbors_threshold=N   Number of neighbors [default: 3].
-  --true_class_bias=N               Bias for clustering [default: 0.9].
-  --true_class_threshold=N          Threshold for clusters [default: 2].
-  --multi_class_bias=N              Multiclass bias [default: 0].
-  --multi_class_threshold=N         Multiclass threshold [default: 2].
+  --knn=N                           Number of neighbors [default: 3].
+  --k_quick_shift=N                 Number of neighbors [default: 3].
+  --knn_outlier=N                   Number of neighbors [default: 3].
+  --class_bias=N                    Bias for clustering [default: 1.0].
+  --display                         Display graphs.
+  --cmap_name=NAME                  Color scheme [default: gist_ncar].
   -h --help                         Show this screen.
   --version                         Show version.
   --verbose                         Print more text.
@@ -57,10 +56,32 @@ import numpy as np
 from sklearn.preprocessing import LabelEncoder
 
 from graph_layout_embedder import Embedder
-from graph_layout_embedder import serialize_dict
 
 
 logger = logging.getLogger(__name__)
+
+
+def serialize_dict(the_dict, full=True, offset='small'):
+    """serialize_dict."""
+    if the_dict:
+        text = []
+        for key in sorted(the_dict):
+            if offset == 'small':
+                line = '%10s: %s' % (key, the_dict[key])
+            elif offset == 'large':
+                line = '%25s: %s' % (key, the_dict[key])
+            elif offset == 'very_large':
+                line = '%50s: %s' % (key, the_dict[key])
+            else:
+                raise Exception('unrecognized option: %s' % offset)
+            line = line.replace('\n', ' ')
+            if full is False:
+                if len(line) > 100:
+                    line = line[:100] + '  ...  ' + line[-20:]
+            text.append(line)
+        return '\n'.join(text)
+    else:
+        return ""
 
 
 def configure_logging(logger, verbosity=0, filename=None):
@@ -189,38 +210,38 @@ def main(args):
     # setup variables
     data_fname = args['-i']
     target_fname = args['-t']
-    n_clusters = int(args['-n'])
     min_threshold = int(args['--min_threshold'])
+    max_threshold = int(args['--max_threshold'])
     cmap_name = args['--cmap_name']
     name = args['-o']
     display = args['--display']
-    nearest_neighbors_threshold = int(args['--nearest_neighbors_threshold'])
-    true_class_bias = float(args['--true_class_bias'])
-    true_class_threshold = int(args['--true_class_threshold'])
-    multi_class_bias = float(args['--multi_class_bias'])
-    multi_class_threshold = int(args['--multi_class_threshold'])
+    knn = int(args['--knn'])
+    k_quick_shift = int(args['--k_quick_shift'])
+    knn_outlier = int(args['--knn_outlier'])
+    class_bias = float(args['--class_bias'])
     correlation_transformation = args['--correlation_transformation']
 
     # load data
     data_matrix, gene_names, instance_names = _load_data_matrix(data_fname)
 
-    if n_clusters == 1:
-        y_orig, target_names = _load_target(target_fname)
-        y_sel = _select_targets(y_orig, min_threshold=min_threshold)
-        logger.info('selected %d classes with more than %d instances' %
-                    (len(y_sel), min_threshold))
-        data_matrix, y_orig_sel = _filter_dataset(data_matrix, y_orig, y_sel)
-        rows, cols = data_matrix.shape
-        logger.info('#instances:%d  #features:%d' % (rows, cols))
-        logger.info('#targets: %d' % len(y_orig_sel))
-        logger.info('#instances:%d  #features:%d' % (rows, cols))
-        lenc = LabelEncoder()
-        y = lenc.fit_transform(y_orig_sel)
-        y = np.array(y)
-        target_dict = dict()
-        for i, c in enumerate(lenc.classes_):
-            target_dict[i] = target_names[c]
-            print '%d -> %d   %s' % (i, c, target_names[c])
+    y_orig, target_names = _load_target(target_fname)
+    y_sel = _select_targets(y_orig,
+                            min_threshold=min_threshold,
+                            max_threshold=max_threshold)
+    logger.info('selected %d classes with more than %d instances' %
+                (len(y_sel), min_threshold))
+    data_matrix, y_orig_sel = _filter_dataset(data_matrix, y_orig, y_sel)
+    rows, cols = data_matrix.shape
+    logger.info('#instances:%d  #features:%d' % (rows, cols))
+    logger.info('#targets: %d' % len(y_orig_sel))
+    logger.info('#instances:%d  #features:%d' % (rows, cols))
+    lenc = LabelEncoder()
+    y = lenc.fit_transform(y_orig_sel)
+    y = np.array(y)
+    target_dict = dict()
+    for i, c in enumerate(lenc.classes_):
+        target_dict[i] = target_names[c]
+        print '%d -> %d   %s' % (i, c, target_names[c])
 
     # prepare data matrix
     if correlation_transformation:
@@ -236,24 +257,18 @@ def main(args):
     logger.info('Writing to files with prefix: %s' % file_name)
 
     embedder = Embedder(
-        nearest_neighbors_threshold=nearest_neighbors_threshold,
-        true_class_bias=true_class_bias,
-        true_class_threshold=true_class_threshold,
-        multi_class_bias=multi_class_bias,
-        multi_class_threshold=multi_class_threshold)
+        knn=knn,
+        k_quick_shift=k_quick_shift,
+        class_bias=class_bias,
+        knn_outlier=knn_outlier)
 
-    if n_clusters == 1:
-        data_matrix = embedder.fit_transform(
-            data_matrix=_data_matrix, target=y)
-        embedder.display(target_dict=target_dict, display=display,
-                         display_class_graph=True, display_clean=True,
-                         cmap=cmap_name, file_name=file_name, figure_size=15)
-    else:
-        data_matrix = embedder.fit_transform(
-            data_matrix=_data_matrix, n_clusters=n_clusters)
-        embedder.display(display=display,
-                         display_class_graph=True, display_clean=True,
-                         cmap=cmap_name, file_name=file_name, figure_size=15)
+    data_matrix = embedder.transform(
+        data_matrix=_data_matrix, target=y)
+    embedder.display(target_dict=target_dict, display=display,
+                     display_hull=True, display_links=True,
+                     display_outliers=True,
+                     cmap=cmap_name, file_name=file_name, figure_size=15)
+
     # write prediction files
     out_fname = file_name + '_2D_coords.txt'
     logger.info('Writing 2D coordinates to file: %s' % out_fname)
@@ -269,16 +284,9 @@ def main(args):
         for t in embedder.target:
             f.write('%d\n' % t)
 
-    out_fname = file_name + '_probs.txt'
-    logger.info('Writing probabilities to file: %s' % out_fname)
-    with open(out_fname, 'w') as f:
-        for prob in embedder.probs:
-            for p in prob:
-                f.write('%.4f ' % p)
-            f.write('\n')
 
 if __name__ == '__main__':
-    args = docopt(__doc__, version='graph_embed 1.0')
+    args = docopt(__doc__, version='graph_embed 2.0')
     if args['--verbose']:
         verbosity = 2
     else:
