@@ -20,13 +20,13 @@ Usage:
               [--class_bias=N]
               [--correlation_transformation]
               [--min_threshold=N] [--max_threshold=N]
-              [--display] [--verbose]
+              [--display] [--figure_size=N] [--verbose]
   graph_embed (-h | --help)
   graph_embed --version
 
 Options:
   -i FILE                           Specify input data file.
-  -t FILE                           Specify target data file.
+  -t FILE                           Specify classes data file.
   --min_threshold=N                 Min num instances per class [default: 5]
   --max_threshold=N                 Max num instances per class [default: 1000]
   -o NAME                           Prefix for output files [default: out].
@@ -36,6 +36,7 @@ Options:
   --knn_outlier=N                   Number of neighbors [default: 3].
   --class_bias=N                    Bias for clustering [default: 1.0].
   --display                         Display graphs.
+  --figure_size=N                   Figure size [default: 15].
   --cmap_name=NAME                  Color scheme [default: gist_ncar].
   -h --help                         Show this screen.
   --version                         Show version.
@@ -43,7 +44,7 @@ Options:
 
 
 """
-
+import os
 import sys
 import time
 import logging
@@ -202,8 +203,6 @@ def _filter_dataset(data_matrix, y, y_sel):
 
 def main(args):
     """Main."""
-    logger.debug(serialize_dict(args))
-
     # setup variables
     data_fname = args['-i']
     target_fname = args['-t']
@@ -217,6 +216,23 @@ def main(args):
     knn_outlier = int(args['--knn_outlier'])
     class_bias = float(args['--class_bias'])
     correlation_transformation = args['--correlation_transformation']
+    figure_size = int(args['--figure_size'])
+
+    # output setup
+    timestamp = time.strftime('%Y_%m_%d_%H_%M_%S')
+    dir_name = name + '_' + timestamp
+    if not os.path.exists(dir_name):
+        os.mkdir(dir_name)
+
+    # logger
+    if args['--verbose']:
+        verbosity = 2
+    else:
+        verbosity = 1
+    configure_logging(logger,
+                      verbosity=verbosity,
+                      filename=os.path.join(dir_name, 'log'))
+    logger.debug(serialize_dict(args))
 
     # load data
     data_matrix, gene_names, instance_names = _load_data_matrix(data_fname)
@@ -225,49 +241,45 @@ def main(args):
     y_sel = _select_targets(y_orig,
                             min_threshold=min_threshold,
                             max_threshold=max_threshold)
+    logger.info('original num classes: %d' % len(set(y_orig)))
     logger.info('selected %d classes with more than %d instances' %
                 (len(y_sel), min_threshold))
     data_matrix, y_orig_sel = _filter_dataset(data_matrix, y_orig, y_sel)
     rows, cols = data_matrix.shape
-    logger.info('#instances:%d  #features:%d' % (rows, cols))
-    logger.info('#targets: %d' % len(y_orig_sel))
-    logger.info('#instances:%d  #features:%d' % (rows, cols))
+    logger.info('num instances:%d  num features:%d' % (rows, cols))
     lenc = LabelEncoder()
     y = lenc.fit_transform(y_orig_sel)
     y = np.array(y)
     target_dict = dict()
     for i, c in enumerate(lenc.classes_):
         target_dict[i] = target_names[c]
-        print '%d -> %d   %s' % (i, c, target_names[c])
 
     # prepare data matrix
     if correlation_transformation:
         _data_matrix = np.corrcoef(data_matrix)
     else:
         _data_matrix = data_matrix
-    rows, cols = _data_matrix.shape
-    logger.info('#instances:%d  #features:%d' % (rows, cols))
 
     # run embedder
-    timestamp = time.strftime('%Y_%m_%d_%H_%M_%S')
-    file_name = name + '_' + timestamp
-    logger.info('Writing to files with prefix: %s' % file_name)
+    logger.info('Writing to files in directory: %s' % dir_name)
+    file_name = os.path.join(dir_name, 'img')
 
     embedder = Embedder(
         knn=knn,
         k_quick_shift=k_quick_shift,
         class_bias=class_bias,
         knn_outlier=knn_outlier)
+    data_matrix = embedder.transform(data_matrix=_data_matrix, target=y)
 
-    data_matrix = embedder.transform(
-        data_matrix=_data_matrix, target=y)
+    # make images
     embedder.display(target_dict=target_dict, display=display,
                      display_hull=True, display_links=True,
                      display_outliers=True,
-                     cmap=cmap_name, file_name=file_name, figure_size=15)
+                     cmap=cmap_name, file_name=file_name,
+                     figure_size=figure_size)
 
-    # write prediction files
-    out_fname = file_name + '_2D_coords.txt'
+    # write additional files
+    out_fname = os.path.join(dir_name, '2D_coords.txt')
     logger.info('Writing 2D coordinates to file: %s' % out_fname)
     with open(out_fname, 'w') as f:
         for row in embedder.embedded_data_matrix:
@@ -275,8 +287,8 @@ def main(args):
                 f.write('%.4f ' % val)
             f.write('\n')
 
-    out_fname = file_name + '_target.txt'
-    logger.info('Writing targets to file: %s' % out_fname)
+    out_fname = os.path.join(dir_name, 'classes.txt')
+    logger.info('Writing classes to file: %s' % out_fname)
     with open(out_fname, 'w') as f:
         for t in embedder.target:
             f.write('%d\n' % t)
@@ -284,11 +296,4 @@ def main(args):
 
 if __name__ == '__main__':
     args = docopt(__doc__, version='graph_embed 2.0')
-    if args['--verbose']:
-        verbosity = 2
-    else:
-        verbosity = 1
-    configure_logging(logger,
-                      verbosity=verbosity,
-                      filename='graph_embed.log')
     main(args)
