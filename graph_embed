@@ -40,17 +40,21 @@ Usage:
   graph_embed --version
 
 Options:
-  -i FILE                           Specify input data file.
-  -t FILE                           Specify classes data file.
+  -i FILE                           Specify input data file in CSV format.
+  -t FILE                           Specify classes data file in CSV format.
   --min_threshold=N                 Min num instances per class [default: 5]
   --max_threshold=N                 Max num instances per class [default: 1000]
-  -o NAME                           Prefix for output files [default: out].
+  -o NAME                           Prefix for output directory [default: out].
   --correlation_transformation      Convert data matrix to corr coeff matrix.
-  --knn=N                           Number of neighbors [default: 3].
-  --k_quick_shift=N                 Number of neighbors [default: 3].
-  --knn_outlier=N                   Number of neighbors [default: 3].
-  --class_bias=N                    Bias for clustering [default: 1.0].
-  --display                         Display graphs.
+  --knn=N                           Number of neighbors for knn links
+                                    [default: 3].
+  --k_quick_shift=N                 Number of neighbors for k_shift links
+                                    [default: 3].
+  --knn_outlier=N                   Number of neighbors for outlier
+                                    identification [default: 3].
+  --class_bias=N                    Contraction bias for clustering
+                                    [default: 1.0].
+  --display                         Display graphs on terminal.
   --figure_size=N                   Figure size [default: 15].
   --cmap_name=NAME                  Color scheme [default: gist_ncar].
   -h --help                         Show this screen.
