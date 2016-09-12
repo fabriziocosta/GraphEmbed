@@ -3,12 +3,27 @@
 # GraphEmbed
 Compute a 2D embedding of a data matrix given supervised class information.
 
-Instances are materialized as nodes in a graph where edges connect the
-nearest neighbors. Additional invisible nodes are placed to represent the
-supervised classes and instances are linked to their respective classes.
-The final embedding is obtained using the spring layout algorithm presented in:
+A discrete label for each instance is expected.
+A graph is built where nodes are instances and there exist two types
+of edges: the 'knn' edges and the 'k_shift' edges.
+A knn edge is an edge to the k-th nearest instance that has the same
+label.
+A k_shift edge is an edge to the k-th nearest instance that is denser
+and has a different label.
+The density is defined as the sum of the pairwise cosine similarity between
+an instance and all the other instances.
+The desired edge length is the euclidean distance between the instances.
+If the endpoints of an edge have the same label then the desired distance
+is divided by 1 + class_bias.
+A k-shift edge is deleted if at least one of the endpoints of is an
+outlier.
+Outlier nodes are defined as those instances that have no mutual
+k=knn_outlier neighbors.
+
+Finally the embedding is computed as the 2D coordinates of the
+corresponding graph embedding using the force layout algorithm from
 Tomihisa Kamada, and Satoru Kawai. "An algorithm for drawing general
-undirected graphs." Information processing letters 31, no. 1 (1989): 7-15.
+undirected graphs.", Information processing letters 31, no. 1 (1989): 7-15.
 
 <p align="center"><img src="img/img.png"></p>
 
@@ -24,15 +39,12 @@ conda install graph_embed -c bioconda
 
 You can execute the program by typing:
 
-```graph_embed -i data.csv -t target.csv --correlation_transformation```
+```./graph_embed -i example/prot_expression.csv -t example/target.csv --correlation_transformation```
 
-If you want the program to cluster data on its own rather than relying on external information about the classes you need to specify the number of desired classes:
+You can change the strength of the belief in the supervised information. Values higher than 0 indicate a stronger belief and will result in more compact layouts for instances of the same class. Values of 0.5-1 are suitable for clean data where clusters are naturally well separated, values of 5-30 are suitable for noisy data where it is necessary to force a strong separation in the 2D representation. 
 
-```graph_embed -i data.csv -n 7 ```
-
-You can change the strength of the belief in the clusters. Values closer to 1 (e.g. 0.9 or 0.95) indicate a stronger belief and will result in more compact layouts.
-
-```graph_embed -i data.csv -t target.csv --correlation_transformation --true_class_bias .95 --multi_class_bias .8```
+To set a desired separation strength:
+```./graph_embed -i example/prot_expression.csv -t example/target.csv --correlation_transformation --class_bias 1 ```
 
 
 ## Output

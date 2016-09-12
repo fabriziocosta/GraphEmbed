@@ -4,12 +4,27 @@
 """GraphEmbed.
 
 Compute a 2D embedding of a data matrix given supervised class information.
-Instances are materialized as nodes in a graph where edges connect the
-nearest neighbors. Additional invisible nodes are placed to represent the
-supervised classes and instances are linked to their respective classes.
-The final embedding is obtained using the spring layout algorithm presented in:
+A discrete label for each instance is expected.
+A graph is built where nodes are instances and there exist two types
+of edges: the 'knn' edges and the 'k_shift' edges.
+A knn edge is an edge to the k-th nearest instance that has the same
+label.
+A k_shift edge is an edge to the k-th nearest instance that is denser
+and has a different label.
+The density is defined as the sum of the pairwise cosine similarity between
+an instance and all the other instances.
+The desired edge length is the euclidean distance between the instances.
+If the endpoints of an edge have the same label then the desired distance
+is divided by 1 + class_bias.
+A k-shift edge is deleted if at least one of the endpoints of is an
+outlier.
+Outlier nodes are defined as those instances that have no mutual
+k=knn_outlier neighbors.
+
+Finally the embedding is computed as the 2D coordinates of the
+corresponding graph embedding using the force layout algorithm from
 Tomihisa Kamada, and Satoru Kawai. "An algorithm for drawing general
-undirected graphs." Information processing letters 31, no. 1 (1989): 7-15.
+undirected graphs.", Information processing letters 31, no. 1 (1989): 7-15.
 
 Version: 2.0
 Author: Fabrizio Costa [costa@informatik.uni-freiburg.de]
