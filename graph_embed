@@ -68,15 +68,11 @@ import sys
 import time
 import logging
 import logging.handlers
-
 import collections
 from docopt import docopt
 import numpy as np
-
 from sklearn.preprocessing import LabelEncoder
-
 from graph_layout_embedder import Embedder
-
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +146,7 @@ def configure_logging(logger, verbosity=0, filename=None):
         logger.addHandler(fh)
 
 
-def _load_data_matrix(fname):
+def _loaddata_matrix(fname):
     logger.info('Reading data from file: %s' % fname)
     data_matrix_original = []
     instance_names = []
@@ -216,8 +212,42 @@ def _filter_dataset(data_matrix, y, y_sel):
             targets.append(target)
             instances.append(instance)
     y = np.array(np.hstack(targets))
-    data_matrix = np.array(np.vstack(instances))
-    return data_matrix, y
+    _data_matrix = np.array(np.vstack(instances))
+    return _data_matrix, y
+
+
+def pre_process(data_fname=None,
+                target_fname=None,
+                correlation_transformation=None,
+                min_threshold=None,
+                max_threshold=None):
+    """Process data."""
+    # load data
+    data_matrix, gene_names, instance_names = _loaddata_matrix(data_fname)
+
+    # prepare data matrix
+    if correlation_transformation:
+        data_matrix = np.corrcoef(data_matrix)
+
+    # prepare target
+    y_orig, target_names = _load_target(target_fname)
+    y_sel = _select_targets(y_orig,
+                            min_threshold=min_threshold,
+                            max_threshold=max_threshold)
+    logger.info('original num classes: %d' % len(set(y_orig)))
+    logger.info('selected %d classes with more than %d instances' %
+                (len(y_sel), min_threshold))
+    data_matrix, y_orig_sel = _filter_dataset(data_matrix, y_orig, y_sel)
+    rows, cols = data_matrix.shape
+    logger.info('num instances:%d  num features:%d' % (rows, cols))
+    lenc = LabelEncoder()
+    y = lenc.fit_transform(y_orig_sel)
+    y = np.array(y)
+    target_dict = dict()
+    for i, c in enumerate(lenc.classes_):
+        target_dict[i] = target_names[c]
+
+    return data_matrix, y, target_dict
 
 
 def main(args):
@@ -253,31 +283,12 @@ def main(args):
                       filename=os.path.join(dir_name, 'log'))
     logger.debug(serialize_dict(args))
 
-    # load data
-    data_matrix, gene_names, instance_names = _load_data_matrix(data_fname)
-
-    y_orig, target_names = _load_target(target_fname)
-    y_sel = _select_targets(y_orig,
-                            min_threshold=min_threshold,
-                            max_threshold=max_threshold)
-    logger.info('original num classes: %d' % len(set(y_orig)))
-    logger.info('selected %d classes with more than %d instances' %
-                (len(y_sel), min_threshold))
-    data_matrix, y_orig_sel = _filter_dataset(data_matrix, y_orig, y_sel)
-    rows, cols = data_matrix.shape
-    logger.info('num instances:%d  num features:%d' % (rows, cols))
-    lenc = LabelEncoder()
-    y = lenc.fit_transform(y_orig_sel)
-    y = np.array(y)
-    target_dict = dict()
-    for i, c in enumerate(lenc.classes_):
-        target_dict[i] = target_names[c]
-
-    # prepare data matrix
-    if correlation_transformation:
-        _data_matrix = np.corrcoef(data_matrix)
-    else:
-        _data_matrix = data_matrix
+    # process data
+    data_matrix, y, target_dict = pre_process(data_fname,
+                                              target_fname,
+                                              correlation_transformation,
+                                              min_threshold,
+                                              max_threshold)
 
     # run embedder
     logger.info('Writing to files in directory: %s' % dir_name)
@@ -288,7 +299,7 @@ def main(args):
         k_quick_shift=k_quick_shift,
         class_bias=class_bias,
         knn_outlier=knn_outlier)
-    data_matrix = embedder.transform(data_matrix=_data_matrix, target=y)
+    data_matrix = embedder.transform(data_matrix=data_matrix, target=y)
 
     # make images
     embedder.display(target_dict=target_dict, display=display,
