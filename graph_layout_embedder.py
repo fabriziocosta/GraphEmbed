@@ -180,6 +180,8 @@ class Embedder(object):
                 pz = data_matrix[dest_id]
                 dist = np.linalg.norm(px - pz)
                 desired_dist = dist / _max_dist
+                if desired_dist == 0:
+                    desired_dist = _max_dist / float(data_matrix.shape[0])
                 # if endpoints of an edge have the same
                 # class then contract teh desired edge length
                 if target[src_id] == target[dest_id]:
@@ -500,10 +502,15 @@ class Embedder(object):
                 if graph[u][v].get('edge_type', '') == 'shift']
             shift_colors = [-graph[u][v]['rank'] for u, v in shift_edges]
             if shift_edges and shift_colors:
-                nx.draw_networkx_edges(
-                    graph, layout_pos, edgelist=shift_edges,
-                    edge_cmap=plt.get_cmap('YlGnBu'),
-                    edge_color=shift_colors, alpha=.2)
+                if len(set(shift_colors)) > 2:
+                    nx.draw_networkx_edges(
+                        graph, layout_pos, edgelist=shift_edges,
+                        edge_cmap=plt.get_cmap('YlGnBu'),
+                        edge_color=shift_colors, alpha=.2)
+                else:
+                    nx.draw_networkx_edges(
+                        graph, layout_pos, edgelist=shift_edges,
+                        edge_color='cornflowerblue', alpha=.2)
         if display_edge:
             # principal shift edges
             qs_th = 1
