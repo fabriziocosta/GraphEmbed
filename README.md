@@ -44,54 +44,55 @@ You can execute the program by typing:
 You can change the strength of the belief in the supervised information. Values higher than 0 indicate a stronger belief and will result in more compact layouts for instances of the same class. Values of 0.5-1 are suitable for clean data where clusters are naturally well separated, values of 5-30 are suitable for noisy data where it is necessary to force a strong separation in the 2D representation. 
 
 To set a desired separation strength:
+
 ```./graph_embed -i example/prot_expression.csv -t example/target.csv --correlation_transformation --class_bias 1 ```
 
 
 ## Output
 
+The option -o allows to set a directory where the produced files are placed.
+The directory name is suffixed with a time stamp that includes year-month-day-hour-min-sec.
 The following files are produced:
 
 ```
-fname_2D_coords.txt      The 2D coordinates, one line per instance
-fname_target.txt         The target identifier (given or predicted), one line per instance 
-fname_probs.txt          The probability of each instance to belong to one of the targets, one line per instance.
-
-fname_1_clean.pdf        The image of the 2D embedding.
-fname_2_clean_hull.pdf   The image of the 2D embedding with convex hulls.
-fname_3.pdf              The image of the 2D embedding with convex hulls and target info.
-fname_4_target.pdf       The image of the 2D embedding of the targets.
+2D_coords.txt     The 2D coordinates, one line per instance
+target.txt        The target identifier, one line per instance 
+img_1_clean.pdf   The image of the 2D embedding.
+img_2_edges.pdf   The image of the 2D embedding with lines in red for knn edges and lines in blue for k-shift-edges.
+img_3_edge.pdf    The image of the 2D embedding with lines in blue for the first shift-edges.
+img_4_hull.pdf    The image of the 2D embedding with class convex hulls and first shift-edges.
 ```
 
 ## Help
 
 ```
-Version: 1.0
+Version: 2.0
 Author: Fabrizio Costa [costa@informatik.uni-freiburg.de]
 
 Usage:
   graph_embed -i FILE (-t FILE | -n N)  [-o NAME] [--cmap_name=NAME]
-              [(-m N | --min_threshold=N)] [--multi_class_threshold=N]
-              [--multi_class_bias=N] [--true_class_threshold=N]
-              [--true_class_bias=N] [--nearest_neighbors_threshold=N]
+              [--knn=N] [--k_quick_shift=N] [--knn_outlier=N]
+              [--class_bias=N]
               [--correlation_transformation]
-              [--display] [--verbose]
+              [--min_threshold=N] [--max_threshold=N]
+              [--display] [--figure_size=N] [--verbose]
   graph_embed (-h | --help)
   graph_embed --version
 
 Options:
   -i FILE                           Specify input data file.
-  -t FILE                           Specify target data file.
-  -n N                              Specify the num of classes [default: 1].
+  -t FILE                           Specify classes data file.
+  --min_threshold=N                 Min num instances per class [default: 5]
+  --max_threshold=N                 Max num instances per class [default: 1000]
   -o NAME                           Prefix for output files [default: out].
-  --display                         Display graphs.
-  -m N, --min_threshold=N           Min num of elements per class [default: 5].
-  --cmap_name=NAME                  Color scheme [default: gist_ncar].
   --correlation_transformation      Convert data matrix to corr coeff matrix.
-  --nearest_neighbors_threshold=N   Number of neighbors [default: 5].
-  --true_class_bias=N               Bias for clustering [default: 0.9].
-  --true_class_threshold=N          Threshold for clusters [default: 3].
-  --multi_class_bias=N              Multiclass bias [default: 0].
-  --multi_class_threshold=N         Multiclass threshold [default: 3].
+  --knn=N                           Number of neighbors [default: 3].
+  --k_quick_shift=N                 Number of neighbors [default: 3].
+  --knn_outlier=N                   Number of neighbors [default: 3].
+  --class_bias=N                    Bias for clustering [default: 1.0].
+  --display                         Display graphs.
+  --figure_size=N                   Figure size [default: 15].
+  --cmap_name=NAME                  Color scheme [default: gist_ncar].
   -h --help                         Show this screen.
   --version                         Show version.
   --verbose                         Print more text.
