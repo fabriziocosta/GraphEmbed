@@ -61,6 +61,7 @@ img_1_clean.pdf   The image of the 2D embedding.
 img_2_edges.pdf   The image of the 2D embedding with lines in red for knn edges and lines in blue for k-shift-edges.
 img_3_edge.pdf    The image of the 2D embedding with lines in blue for the first shift-edges.
 img_4_hull.pdf    The image of the 2D embedding with class convex hulls and first shift-edges.
+log               The program execution log file
 ```
 
 ## Help
