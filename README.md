@@ -25,7 +25,7 @@ corresponding graph embedding using the force layout algorithm from
 Tomihisa Kamada, and Satoru Kawai. "An algorithm for drawing general
 undirected graphs.", Information processing letters 31, no. 1 (1989): 7-15.
 
-<p align="center"><img src="img/img.png"></p>
+<p align="center"><img src="example/img_1_clean.png"></p>
 
 ## Installation
 
@@ -102,14 +102,14 @@ Options:
 ## Sample output pdf files
 
 The image of the 2D embedding.
-<p align="center"><img src="img/img_1_clean.png"></p>
+<p align="center"><img src="example/img_1_clean.png"></p>
 
-The image of the 2D embedding with convex hulls.
-<p align="center"><img src="img/img_2_clean_hull.png"></p>
+The image of the 2D embedding with lines in red for knn edges and lines in blue for k-shift-edges.
+<p align="center"><img src="example/img_2_links.png"></p>
 
-The image of the 2D embedding with convex hulls and target info.
-<p align="center"><img src="img/img_3.png"></p>
+The image of the 2D embedding with lines in blue for the first shift-edges.
+<p align="center"><img src="example/img_3_link.png"></p>
 
-The image of the 2D embedding of the targets.
-<p align="center"><img src="img/img_4_target.png"></p>
+The image of the 2D embedding with class convex hulls and first shift-edges.
+<p align="center"><img src="example/img_4_hull.png"></p>
 
