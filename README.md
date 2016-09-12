@@ -45,7 +45,7 @@ You can change the strength of the belief in the supervised information. Values 
 
 To set a desired separation strength:
 
-```./graph_embed -i example/prot_expression.csv -t example/target.csv --correlation_transformation --class_bias 1 ```
+```./graph_embed -i example/prot_expression.csv -t example/target.csv --correlation_transformation --class_bias 5 ```
 
 
 ## Output
