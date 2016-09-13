@@ -10,12 +10,12 @@ A knn edge is an edge to the k-th nearest instance that has the same
 label.
 A k_shift edge is an edge to the k-th nearest instance that is denser
 and has a different label.
-The density is defined as the sum of the pairwise cosine similarity between
+Density is defined as the sum of the pairwise cosine similarity between
 an instance and all the other instances.
 The desired edge length is the euclidean distance between the instances.
 If the endpoints of an edge have the same label then the desired distance
 is divided by 1 + class_bias.
-A k-shift edge is deleted if at least one of the endpoints of is an
+A k-shift edge is deleted if at least one of the endpoints is an
 outlier.
 Outlier nodes are defined as those instances that have no mutual
 k=knn_outlier neighbors.
