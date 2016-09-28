@@ -19,41 +19,38 @@ is divided by 1 + class_bias.
 A k-shift edge is deleted if at least one of the endpoints of is an
 outlier.
 Outlier nodes are defined as those instances that have no mutual
-k=knn_outlier neighbors.
+k neighbors.
 
 Finally the embedding is computed as the 2D coordinates of the
 corresponding graph embedding using the force layout algorithm from
 Tomihisa Kamada, and Satoru Kawai. "An algorithm for drawing general
 undirected graphs.", Information processing letters 31, no. 1 (1989): 7-15.
 
-Version: 2.0
+Version: 2.1
 Author: Fabrizio Costa [costa@informatik.uni-freiburg.de]
 
 Usage:
-  graph_embed -i FILE (-t FILE | -n N)  [-o NAME] [--cmap_name=NAME]
-              [--knn=N] [--k_quick_shift=N] [--knn_outlier=N]
-              [--class_bias=N]
+  graph_embed -i <file> -t <file> [-o NAME]
+              [-b N] [--class_bias=N] [--k=N] [--gamma=N]
               [--correlation_transformation]
               [--min_threshold=N] [--max_threshold=N]
-              [--display] [--figure_size=N] [--verbose]
+              [--display] [--figure_size=N] [--cmap_name=NAME] [--verbose]
   graph_embed (-h | --help)
   graph_embed --version
 
 Options:
-  -i FILE                           Specify input data file in CSV format.
-  -t FILE                           Specify classes data file in CSV format.
+  -i <file>                         Specify input data file in CSV format.
+  -t <file>                         Specify classes data file in CSV format.
   --min_threshold=N                 Min num instances per class [default: 5]
-  --max_threshold=N                 Max num instances per class [default: 1000]
+  --max_threshold=N                 Max num instances per class [default: 200]
   -o NAME                           Prefix for output directory [default: out].
-  --correlation_transformation      Convert data matrix to corr coeff matrix.
-  --knn=N                           Number of neighbors for knn links
-                                    [default: 3].
-  --k_quick_shift=N                 Number of neighbors for k_shift links
-                                    [default: 3].
-  --knn_outlier=N                   Number of neighbors for outlier
-                                    identification [default: 3].
-  --class_bias=N                    Contraction bias for clustering
+  -b N, --class_bias=N              Contraction bias for clustering
                                     [default: 1.0].
+  --k=N                             Number of neighbors for knn links
+                                    [default: 3].
+  --gamma=N                         Locality parameter for the gaussian kernel
+                                    [default: 50].
+  --correlation_transformation      Convert data matrix to corr coeff matrix.
   --display                         Display graphs on terminal.
   --figure_size=N                   Figure size [default: 15].
   --cmap_name=NAME                  Color scheme [default: gist_ncar].
@@ -72,7 +69,7 @@ import collections
 from docopt import docopt
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
-from graph_layout_embedder import Embedder
+from graph_layout_embedder import GraphEmbedder
 
 logger = logging.getLogger(__name__)
 
@@ -260,10 +257,9 @@ def main(args):
     cmap_name = args['--cmap_name']
     name = args['-o']
     display = args['--display']
-    knn = int(args['--knn'])
-    k_quick_shift = int(args['--k_quick_shift'])
-    knn_outlier = int(args['--knn_outlier'])
-    class_bias = float(args['--class_bias'])
+    k = int(args['--k'])
+    gamma = int(args['--gamma'])
+    class_bias = float(args['--class_bias'][0])
     correlation_transformation = args['--correlation_transformation']
     figure_size = int(args['--figure_size'])
 
@@ -294,25 +290,40 @@ def main(args):
     logger.info('Writing to files in directory: %s' % dir_name)
     file_name = os.path.join(dir_name, 'img')
 
-    embedder = Embedder(
-        knn=knn,
-        k_quick_shift=k_quick_shift,
+    ge = GraphEmbedder(
+        k=k,
         class_bias=class_bias,
-        knn_outlier=knn_outlier)
-    data_matrix = embedder.transform(data_matrix=data_matrix, target=y)
+        metric='rbf', gamma=gamma)
+    data_matrix_2d = ge.transform(data_matrix=data_matrix, target=y)
 
     # make images
-    embedder.display(target_dict=target_dict, display=display,
-                     display_hull=True, display_links=True,
+    ge.display(target_dict=target_dict,
+               display=display,
+               display_outliers=True,
+               cmap=cmap_name,
+               file_name=file_name,
+               figure_size=figure_size)
+
+    ge.display_links(target_dict=target_dict,
+                     display=display,
                      display_outliers=True,
-                     cmap=cmap_name, file_name=file_name,
+                     cmap=cmap_name,
+                     file_name=file_name,
                      figure_size=figure_size)
+
+    ge.display_hull(target_dict=target_dict,
+                    display=display,
+                    display_outliers=True,
+                    remove_outer_layer=False,
+                    cmap=cmap_name,
+                    file_name=file_name,
+                    figure_size=figure_size)
 
     # write additional files
     out_fname = os.path.join(dir_name, '2D_coords.txt')
     logger.info('Writing 2D coordinates to file: %s' % out_fname)
     with open(out_fname, 'w') as f:
-        for row in embedder.embedded_data_matrix:
+        for row in data_matrix_2d:
             for val in row:
                 f.write('%.4f ' % val)
             f.write('\n')
@@ -320,10 +331,10 @@ def main(args):
     out_fname = os.path.join(dir_name, 'classes.txt')
     logger.info('Writing classes to file: %s' % out_fname)
     with open(out_fname, 'w') as f:
-        for t in embedder.target:
+        for t in ge.target:
             f.write('%d\n' % t)
 
 
 if __name__ == '__main__':
-    args = docopt(__doc__, version='graph_embed 2.0')
+    args = docopt(__doc__, version='graph_embed v2.1')
     main(args)

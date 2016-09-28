@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Provides layout in 2D of vector instances."""
+"""Provides layout in 2D of vectors."""
 
 from collections import defaultdict
 import networkx as nx
@@ -11,12 +11,13 @@ from matplotlib.patches import Polygon
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics.pairwise import pairwise_kernels
+from sklearn.metrics.pairwise import pairwise_distances
 
 import logging
 logger = logging.getLogger(__name__)
 
 
-class Embedder(object):
+class GraphEmbedder(object):
     """Transform high dimensional labeled vectors to two dimensional vectors.
 
     A discrete label for each instance is expected.
@@ -24,7 +25,8 @@ class Embedder(object):
     of edges: the 'knn' edges and the 'k_shift' edges.
     A knn edge is an edge to the k-th nearest instance that has the same
     label.
-    A k_shift edge is an edge to the k-th nearest instance that is denser.
+    A k_shift edge is an edge to the k-th nearest instance that is denser
+    and has a different label.
     The density is defined as the sum of the pairwise cosine similarity between
     an instance and all the other instances.
     The desired edge length is the euclidean distance between the instances.
@@ -42,18 +44,17 @@ class Embedder(object):
     """
 
     def __init__(self,
-                 knn=3,
-                 k_quick_shift=3,
-                 class_bias=1,
-                 knn_outlier=3,
+                 k=5,
+                 class_bias=2,
                  random_state=1,
-                 metric='cosine', **kwds):
+                 metric='rbf', **kwds):
         """Constructor."""
+        self.name = self.__class__.__name__
+        self.__version__ = 'v2.0.1199'
+
         self.random_state = random_state
-        self.k_quick_shift = k_quick_shift
-        self.knn = knn
+        self.k = k
         self.class_bias = class_bias
-        self.knn_outlier = knn_outlier
         self.metric = metric
         self.kwds = kwds
 
@@ -61,6 +62,8 @@ class Embedder(object):
         self.target_pred = None
         self.graph = None
         self.knn_graph = None
+
+        logger.debug('%s' % str(self))
 
     def __str__(self):
         """String."""
@@ -92,12 +95,9 @@ class Embedder(object):
         """transform."""
         if target is None:
             target = np.array([1] * data_matrix.shape[0])
-        instance_graph = self.build_instance_graph(
-            data_matrix=data_matrix,
-            target=target,
-            k_quick_shift=self.k_quick_shift,
-            knn=self.knn,
-            knn_outlier=self.knn_outlier)
+        instance_graph = self.build_graph(data_matrix=data_matrix,
+                                          target=target,
+                                          k=self.k)
         self.annotate_graph_with_graphviz_layout(instance_graph)
         embedded_data_matrix = [instance_graph.node[v]['pos']
                                 for v in instance_graph.nodes()]
@@ -107,11 +107,8 @@ class Embedder(object):
         self.target = target
         return self.embedded_data_matrix
 
-    def build_instance_graph(self, data_matrix=None, target=None,
-                             k_quick_shift=None,
-                             knn_outlier=None,
-                             knn=3):
-        """Build instance graph."""
+    def build_graph(self, data_matrix=None, target=None, k=3):
+        """Build graph."""
         size = data_matrix.shape[0]
         # make kernel
         kernel_matrix = pairwise_kernels(data_matrix,
@@ -120,9 +117,10 @@ class Embedder(object):
         # compute instance density as average pairwise similarity
         density = np.sum(kernel_matrix, 0) / size
         # compute list of nearest neighbors
-        kernel_matrix_sorted_ids = np.argsort(-kernel_matrix)
+        distance_matrix = pairwise_distances(data_matrix)
+        knn_ids = np.argsort(distance_matrix)
         # make matrix of densities ordered by nearest neighbor
-        density_matrix = density[kernel_matrix_sorted_ids]
+        density_matrix = density[knn_ids]
 
         # make a graph with instances as nodes
         graph = nx.Graph()
@@ -130,32 +128,28 @@ class Embedder(object):
             graph.add_node(v, group=target[v], outlier=False)
 
         # build knn edges
-        if knn > 0:
+        if k > 0:
             # find the closest selected instance and instantiate knn edges
             graph = self._add_knn_links(
                 graph,
                 target,
                 kernel_matrix=kernel_matrix,
-                kernel_matrix_sorted_ids=kernel_matrix_sorted_ids,
-                nneighbors_th=knn)
-            if knn_outlier:
-                self._annotate_outliers(
-                    graph,
-                    nneighbors_th=knn_outlier,
-                    kernel_matrix=kernel_matrix,
-                    kernel_matrix_sorted_ids=kernel_matrix_sorted_ids)
+                knn_ids=knn_ids,
+                nneighbors_th=k)
+            self._annotate_outliers(
+                graph,
+                nneighbors_th=k,
+                kernel_matrix=kernel_matrix,
+                knn_ids=knn_ids)
 
         # build shift tree
-        for th in range(1, k_quick_shift + 1):
+        for th in range(1, k + 1):
             link_ids = self._kernel_shift_links(
                 kernel_matrix=kernel_matrix,
                 density_matrix=density_matrix,
-                kernel_matrix_sorted_ids=kernel_matrix_sorted_ids,
+                knn_ids=knn_ids,
                 k_quick_shift=th,
                 target=target)
-            # use the links from the closest denser neighbor to
-            # build a tree and annotate each node with the size
-            # of the subtree that it dominates
             for i, link in enumerate(link_ids):
                 if i != link:
                     graph.add_edge(i, link, edge_type='shift', rank=th)
@@ -201,7 +195,7 @@ class Embedder(object):
 
     def _kernel_shift_links(self, kernel_matrix=None,
                             density_matrix=None,
-                            kernel_matrix_sorted_ids=None,
+                            knn_ids=None,
                             k_quick_shift=None,
                             target=None):
         num_targets = len(set(target))
@@ -219,7 +213,7 @@ class Embedder(object):
             classes.add(target[i])
             # for all neighbors from the closest to the furthest
             for jj, j_density in enumerate(densities):
-                j = kernel_matrix_sorted_ids[i, jj]
+                j = knn_ids[i, jj]
                 if jj > 0:
                     # if the density of the neighbor is higher than the
                     # density of the instance and the class is different
@@ -234,13 +228,13 @@ class Embedder(object):
         return link_ids
 
     def _add_knn_links(self, graph, target, nneighbors_th=1,
-                       kernel_matrix=None, kernel_matrix_sorted_ids=None):
+                       kernel_matrix=None, knn_ids=None):
         size = kernel_matrix.shape[0]
         for i in range(size):
             # add edges to the k nns with same class
             k = 0
             for jj in range(size):
-                j = kernel_matrix_sorted_ids[i, jj]
+                j = knn_ids[i, jj]
                 if i != j:
                     if target[i] == target[j]:
                         graph.add_edge(i, j, edge_type='knn', rank=k)
@@ -251,18 +245,18 @@ class Embedder(object):
         return graph
 
     def _annotate_outliers(self, graph, nneighbors_th=1,
-                           kernel_matrix=None, kernel_matrix_sorted_ids=None):
+                           kernel_matrix=None, knn_ids=None):
         size = kernel_matrix.shape[0]
         for i in range(size):
             counter = 0
             # add edges to the knns
             for jj in range(1, int(nneighbors_th) + 1):
-                j = kernel_matrix_sorted_ids[i, jj]
+                j = knn_ids[i, jj]
                 if i != j:
                     # check that within the k-nn also i is a knn of j
                     # i.e. use the symmetric nneighbor notion
                     upto = int(nneighbors_th) + 1
-                    i_knns = kernel_matrix_sorted_ids[j, :upto]
+                    i_knns = knn_ids[j, :upto]
                     if i in list(i_knns):
                         counter += 1
                         break
@@ -295,68 +289,14 @@ class Embedder(object):
                 raise Exception('Assigned NaN value to position')
             graph.node[v]['pos'] = layout_pos[v]
 
-    def _get_node_colors(self, codes, cmap=None):
-        cm = matplotlib.cm.ScalarMappable(
-            norm=matplotlib.colors.Normalize(vmin=min(codes),
-                                             vmax=max(codes)),
-            cmap=cmap)
-        cols = np.array(range(min(codes), max(codes) + 1))
-        # remove 4th column=alpha
-        rgba_color_codes = cm.to_rgba(cols)[:, :3]
-
-        enc = OneHotEncoder(sparse=False)
-        codes = enc.fit_transform(codes.reshape(-1, 1))
-        instance_cols = np.dot(codes, rgba_color_codes)[:, :3]
-        return instance_cols
-
-    def _get_node_layout_positions(self, graph):
-        layout_pos = {v: graph.node[v]['pos'] for v in graph.nodes()}
-        for pos in layout_pos:
-            assert(layout_pos[pos][0] == layout_pos[pos][0] and
-                   layout_pos[pos][1] == layout_pos[pos][1]),\
-                'NaN position detected'
-        return layout_pos
-
-    def _convex_hull(self, data_matrix, target, remove_outer_layer=True):
-        conv_hulls = []
-        for c in set(target):
-            points = []
-            for z, xy in zip(target, data_matrix):
-                if z == c:
-                    points.append(xy)
-            points = np.array(points)
-            hull = ConvexHull(points)
-            conv_hulls.append(points[hull.vertices])
-        if remove_outer_layer:
-            # remove conv hulls
-            second_conv_hulls = []
-            for c in set(target):
-                points = []
-                all_points = []
-                for z, xy in zip(target, data_matrix):
-                    if z == c:
-                        all_points.append(xy)
-                        if xy not in conv_hulls[c]:
-                            points.append(xy)
-                points = np.array(points)
-                all_points = np.array(all_points)
-                # if the points in the convex hull are more than half of the
-                # total, then do not remove them from the set
-                if len(points) <= 2:
-                    hull = ConvexHull(all_points)
-                    second_conv_hulls.append(all_points[hull.vertices])
-                else:
-                    hull = ConvexHull(points)
-                    second_conv_hulls.append(points[hull.vertices])
-            return second_conv_hulls
-        else:
-            return conv_hulls
-
-    def display(self, target_dict=None, true_target=None,
-                remove_outer_layer=False,
-                display=True, display_hull=False, display_links=False,
+    def display(self,
+                target_dict=None,
+                true_target=None,
+                display=True,
                 display_outliers=False,
-                file_name='', cmap='rainbow', figure_size=15):
+                file_name='',
+                cmap='rainbow',
+                figure_size=15):
         """Display."""
         self.display_graph(
             self.instance_graph,
@@ -369,56 +309,86 @@ class Embedder(object):
             display_edge=False,
             display_outliers=display_outliers,
             file_name=file_name + '_1_clean.pdf')
-        if display_links:
-            self.display_graph(
-                self.instance_graph,
-                target_dict=target_dict,
-                true_target=true_target,
-                display_edge=False,
-                display_edges=True,
-                display_hull=False,
-                figure_size=figure_size,
-                cmap=cmap,
-                node_size=40,
-                edge_thickness=.01,
-                display_outliers=display_outliers,
-                file_name=file_name + '_2_links.pdf')
-            self.display_graph(
-                self.instance_graph,
-                target_dict=target_dict,
-                true_target=true_target,
-                display_edge=True,
-                display_edges=False,
-                display_hull=False,
-                figure_size=figure_size,
-                cmap=cmap,
-                node_size=40,
-                edge_thickness=.01,
-                display_outliers=display_outliers,
-                file_name=file_name + '_3_link.pdf')
-        if display_hull:
-            self.display_graph(
-                self.instance_graph,
-                target_dict=target_dict,
-                true_target=true_target,
-                display_hull=True,
-                remove_outer_layer=remove_outer_layer,
-                cmap=cmap,
-                figure_size=figure_size,
-                node_size=40,
-                display_outliers=display_outliers,
-                display_edge=True,
-                file_name=file_name + '_4_hull.pdf')
         if display:
             plt.show()
 
-    def display_graph(self, graph, target_dict=None, true_target=None,
-                      display_label=False, display_edge=True,
+    def display_links(self,
+                      target_dict=None,
+                      true_target=None,
+                      display=True,
+                      display_outliers=False,
+                      file_name='',
+                      cmap='rainbow',
+                      figure_size=15):
+        """display_links."""
+        self.display_graph(
+            self.instance_graph,
+            target_dict=target_dict,
+            true_target=true_target,
+            display_edge=False,
+            display_edges=True,
+            display_hull=False,
+            figure_size=figure_size,
+            cmap=cmap,
+            node_size=40,
+            edge_thickness=.01,
+            display_outliers=display_outliers,
+            file_name=file_name + '_2_links.pdf')
+        self.display_graph(
+            self.instance_graph,
+            target_dict=target_dict,
+            true_target=true_target,
+            display_edge=True,
+            display_edges=False,
+            display_hull=False,
+            figure_size=figure_size,
+            cmap=cmap,
+            node_size=40,
+            edge_thickness=.01,
+            display_outliers=display_outliers,
+            file_name=file_name + '_3_link.pdf')
+        if display:
+            plt.show()
+
+    def display_hull(self,
+                     target_dict=None,
+                     true_target=None,
+                     remove_outer_layer=False,
+                     display=True,
+                     display_outliers=False,
+                     file_name='',
+                     cmap='rainbow',
+                     figure_size=15):
+        """display_hull."""
+        self.display_graph(
+            self.instance_graph,
+            target_dict=target_dict,
+            true_target=true_target,
+            display_hull=True,
+            remove_outer_layer=remove_outer_layer,
+            cmap=cmap,
+            figure_size=figure_size,
+            node_size=40,
+            display_outliers=display_outliers,
+            display_edge=True,
+            file_name=file_name + '_4_hull.pdf')
+        if display:
+            plt.show()
+
+    def display_graph(self,
+                      graph,
+                      target_dict=None,
+                      true_target=None,
+                      display_label=False,
+                      display_edge=True,
                       display_edges=False,
                       display_outliers=False,
-                      display_hull=True, remove_outer_layer=False,
+                      display_hull=True,
+                      remove_outer_layer=False,
                       edge_thickness=40,
-                      cmap='gist_ncar', node_size=600, figure_size=15,
+                      cmap='gist_ncar',
+                      node_size=600,
+                      figure_size=15,
                       file_name=''):
         """Display graph."""
         if target_dict is None:
@@ -538,7 +508,7 @@ class Embedder(object):
     def _draw_class_id(self, graph,
                        target_dict=None,
                        cmap=None,
-                       node_size=700):
+                       node_size=800):
         group_coords = defaultdict(list)
         node_label_dict = dict()
         ids = graph.nodes()
@@ -555,12 +525,69 @@ class Embedder(object):
         codes = np.array([u for u in average_graph.nodes()])
         instance_cols = self._get_node_colors(codes, cmap=cmap)
         nx.draw_networkx_nodes(average_graph, layout_pos,
-                               node_color=instance_cols,
+                               node_color='w',
                                cmap=cmap, node_size=node_size,
-                               alpha=.5, linewidths=0)
+                               alpha=.7, linewidths=1)
         nx.draw_networkx_labels(average_graph, layout_pos, node_label_dict,
-                                font_size=18, font_weight='black',
+                                font_size=16, font_weight='black',
                                 font_color='w')
         nx.draw_networkx_labels(average_graph, layout_pos, node_label_dict,
-                                font_size=18, font_weight='light',
+                                font_size=16, font_weight='light',
                                 font_color='k')
+
+    def _get_node_colors(self, codes, cmap=None):
+        cm = matplotlib.cm.ScalarMappable(
+            norm=matplotlib.colors.Normalize(vmin=min(codes),
+                                             vmax=max(codes)),
+            cmap=cmap)
+        cols = np.array(range(min(codes), max(codes) + 1))
+        # remove 4th column=alpha
+        rgba_color_codes = cm.to_rgba(cols)[:, :3]
+
+        enc = OneHotEncoder(sparse=False)
+        codes = enc.fit_transform(codes.reshape(-1, 1))
+        instance_cols = np.dot(codes, rgba_color_codes)[:, :3]
+        return instance_cols
+
+    def _get_node_layout_positions(self, graph):
+        layout_pos = {v: graph.node[v]['pos'] for v in graph.nodes()}
+        for pos in layout_pos:
+            assert(layout_pos[pos][0] == layout_pos[pos][0] and
+                   layout_pos[pos][1] == layout_pos[pos][1]),\
+                'NaN position detected'
+        return layout_pos
+
+    def _convex_hull(self, data_matrix, target, remove_outer_layer=True):
+        conv_hulls = []
+        for c in set(target):
+            points = []
+            for z, xy in zip(target, data_matrix):
+                if z == c:
+                    points.append(xy)
+            points = np.array(points)
+            hull = ConvexHull(points)
+            conv_hulls.append(points[hull.vertices])
+        if remove_outer_layer:
+            # remove conv hulls
+            second_conv_hulls = []
+            for c in set(target):
+                points = []
+                all_points = []
+                for z, xy in zip(target, data_matrix):
+                    if z == c:
+                        all_points.append(xy)
+                        if xy not in conv_hulls[c]:
+                            points.append(xy)
+                points = np.array(points)
+                all_points = np.array(all_points)
+                # if the points in the convex hull are more than half of the
+                # total, then do not remove them from the set
+                if len(points) <= 2:
+                    hull = ConvexHull(all_points)
+                    second_conv_hulls.append(all_points[hull.vertices])
+                else:
+                    hull = ConvexHull(points)
+                    second_conv_hulls.append(points[hull.vertices])
+            return second_conv_hulls
+        else:
+            return conv_hulls
