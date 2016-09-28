@@ -18,7 +18,7 @@ is divided by 1 + class_bias.
 A k-shift edge is deleted if at least one of the endpoints is an
 outlier.
 Outlier nodes are defined as those instances that have no mutual
-k=knn_outlier neighbors.
+k neighbors.
 
 Finally the embedding is computed as the 2D coordinates of the
 corresponding graph embedding using the force layout algorithm from
@@ -67,31 +67,32 @@ log               The program execution log file
 ## Help
 
 ```
-Version: 2.0
+Version: 2.1
 Author: Fabrizio Costa [costa@informatik.uni-freiburg.de]
 
 Usage:
-  graph_embed -i FILE (-t FILE | -n N)  [-o NAME] [--cmap_name=NAME]
-              [--knn=N] [--k_quick_shift=N] [--knn_outlier=N]
-              [--class_bias=N]
+  graph_embed -i <file> -t <file> [-o NAME]
+              [-b N] [--class_bias=N] [--k=N] [--gamma=N]
               [--correlation_transformation]
               [--min_threshold=N] [--max_threshold=N]
-              [--display] [--figure_size=N] [--verbose]
+              [--display] [--figure_size=N] [--cmap_name=NAME] [--verbose]
   graph_embed (-h | --help)
   graph_embed --version
 
 Options:
-  -i FILE                           Specify input data file.
-  -t FILE                           Specify classes data file.
+  -i <file>                         Specify input data file in CSV format.
+  -t <file>                         Specify classes data file in CSV format.
   --min_threshold=N                 Min num instances per class [default: 5]
-  --max_threshold=N                 Max num instances per class [default: 1000]
-  -o NAME                           Prefix for output files [default: out].
+  --max_threshold=N                 Max num instances per class [default: 200]
+  -o NAME                           Prefix for output directory [default: out].
+  -b N, --class_bias=N              Contraction bias for clustering
+                                    [default: 1.0].
+  --k=N                             Number of neighbors for knn links
+                                    [default: 3].
+  --gamma=N                         Locality parameter for the gaussian kernel
+                                    [default: 50].
   --correlation_transformation      Convert data matrix to corr coeff matrix.
-  --knn=N                           Number of neighbors [default: 3].
-  --k_quick_shift=N                 Number of neighbors [default: 3].
-  --knn_outlier=N                   Number of neighbors [default: 3].
-  --class_bias=N                    Bias for clustering [default: 1.0].
-  --display                         Display graphs.
+  --display                         Display graphs on terminal.
   --figure_size=N                   Figure size [default: 15].
   --cmap_name=NAME                  Color scheme [default: gist_ncar].
   -h --help                         Show this screen.
