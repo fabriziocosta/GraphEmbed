@@ -43,9 +43,9 @@ You can execute the program by typing:
 
 You can change the strength of the belief in the supervised information. Values higher than 0 indicate a stronger belief and will result in more compact layouts for instances of the same class. Values of 0.5-1 are suitable for clean data where clusters are naturally well separated, values of 5-30 are suitable for noisy data where it is necessary to force a strong separation in the 2D representation. 
 
-To set a desired separation strength:
+To set a desired separation strength use -c, to specify the number of neighbors use -k, to specify the locality use -l:
 
-```./graph_embed -i example/prot_expression.csv -t example/target.csv --correlation_transformation --class_bias 5 ```
+```./graph_embed -i example/prot_expression.csv -t example/target.csv --correlation_transformation -c 5 -k 4 -l 50```
 
 
 ## Output
@@ -67,12 +67,12 @@ log               The program execution log file
 ## Help
 
 ```
-Version: 2.1
+Version: 2.2
 Author: Fabrizio Costa [costa@informatik.uni-freiburg.de]
 
 Usage:
   graph_embed -i <file> -t <file> [-o NAME]
-              [-b N] [--class_bias=N] [--k=N] [--gamma=N]
+              [-c N, --class_confidence=N] [-k=N] [-l N, --locality=N]
               [--correlation_transformation]
               [--min_threshold=N] [--max_threshold=N]
               [--display] [--figure_size=N] [--cmap_name=NAME] [--verbose]
@@ -85,12 +85,12 @@ Options:
   --min_threshold=N                 Min num instances per class [default: 5]
   --max_threshold=N                 Max num instances per class [default: 200]
   -o NAME                           Prefix for output directory [default: out].
-  -b N, --class_bias=N              Contraction bias for clustering
+  -c N, --class_confidence=N        Contraction bias for clustering
                                     [default: 1.0].
-  --k=N                             Number of neighbors for knn links
+  -k N                              Number of neighbors for knn links
                                     [default: 3].
-  --gamma=N                         Locality parameter for the gaussian kernel
-                                    [default: 50].
+  -l N, --locality=N                Locality parameter, i.e. gamma coefficient
+                                    for the gaussian kernel [default: 150].
   --correlation_transformation      Convert data matrix to corr coeff matrix.
   --display                         Display graphs on terminal.
   --figure_size=N                   Figure size [default: 15].
