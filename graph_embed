@@ -26,7 +26,7 @@ corresponding graph embedding using the force layout algorithm from
 Tomihisa Kamada, and Satoru Kawai. "An algorithm for drawing general
 undirected graphs.", Information processing letters 31, no. 1 (1989): 7-15.
 
-Version: 2.1
+Version: 2.2
 Author: Fabrizio Costa [costa@informatik.uni-freiburg.de]
 
 Usage:
@@ -250,7 +250,6 @@ def pre_process(data_fname=None,
 def main(args):
     """Main."""
     # setup variables
-    print args
     data_fname = args['-i']
     target_fname = args['-t']
     min_threshold = int(args['--min_threshold'])
@@ -337,5 +336,5 @@ def main(args):
 
 
 if __name__ == '__main__':
-    args = docopt(__doc__, version='graph_embed v2.1')
+    args = docopt(__doc__, version='graph_embed v2.2')
     main(args)
