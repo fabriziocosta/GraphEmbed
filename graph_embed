@@ -31,7 +31,7 @@ Author: Fabrizio Costa [costa@informatik.uni-freiburg.de]
 
 Usage:
   graph_embed -i <file> -t <file> [-o NAME]
-              [-b N] [--class_bias=N] [--k=N] [--gamma=N]
+              [-c N, --class_confidence=N] [-k=N] [-l N, --locality=N]
               [--correlation_transformation]
               [--min_threshold=N] [--max_threshold=N]
               [--display] [--figure_size=N] [--cmap_name=NAME] [--verbose]
@@ -44,12 +44,12 @@ Options:
   --min_threshold=N                 Min num instances per class [default: 5]
   --max_threshold=N                 Max num instances per class [default: 200]
   -o NAME                           Prefix for output directory [default: out].
-  -b N, --class_bias=N              Contraction bias for clustering
+  -c N, --class_confidence=N        Contraction bias for clustering
                                     [default: 1.0].
-  --k=N                             Number of neighbors for knn links
+  -k N                              Number of neighbors for knn links
                                     [default: 3].
-  --gamma=N                         Locality parameter for the gaussian kernel
-                                    [default: 50].
+  -l N, --locality=N                Locality parameter, i.e. gamma coefficient
+                                    for the gaussian kernel [default: 150].
   --correlation_transformation      Convert data matrix to corr coeff matrix.
   --display                         Display graphs on terminal.
   --figure_size=N                   Figure size [default: 15].
@@ -250,6 +250,7 @@ def pre_process(data_fname=None,
 def main(args):
     """Main."""
     # setup variables
+    print args
     data_fname = args['-i']
     target_fname = args['-t']
     min_threshold = int(args['--min_threshold'])
@@ -257,9 +258,9 @@ def main(args):
     cmap_name = args['--cmap_name']
     name = args['-o']
     display = args['--display']
-    k = int(args['--k'])
-    gamma = int(args['--gamma'])
-    class_bias = float(args['--class_bias'][0])
+    k = int(args['-k'])
+    gamma = int(args['--locality'][0])
+    class_bias = float(args['--class_confidence'][0])
     correlation_transformation = args['--correlation_transformation']
     figure_size = int(args['--figure_size'])
 

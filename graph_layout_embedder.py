@@ -522,8 +522,8 @@ class GraphEmbedder(object):
             coords = np.mean(coordinate_matrix, axis=0)
             average_graph.add_node(group_id, pos=coords)
         layout_pos = self._get_node_layout_positions(average_graph)
-        codes = np.array([u for u in average_graph.nodes()])
-        instance_cols = self._get_node_colors(codes, cmap=cmap)
+        # codes = np.array([u for u in average_graph.nodes()])
+        # instance_cols = self._get_node_colors(codes, cmap=cmap)
         nx.draw_networkx_nodes(average_graph, layout_pos,
                                node_color='w',
                                cmap=cmap, node_size=node_size,
