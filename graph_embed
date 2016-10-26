@@ -31,7 +31,7 @@ Author: Fabrizio Costa [costa@informatik.uni-freiburg.de]
 
 Usage:
   graph_embed -i <file> -t <file> [-o NAME]
-              [-c N, --class_confidence=N] [-k=N] [-l N, --locality=N]
+              [-c N, --class_confidence=N] [-k N] [-d N] [-z N] [-l N]
               [--correlation_transformation]
               [--min_threshold=N] [--max_threshold=N]
               [--display] [--figure_size=N] [--cmap_name=NAME] [--verbose]
@@ -41,16 +41,21 @@ Usage:
 Options:
   -i <file>                         Specify input data file in CSV format.
   -t <file>                         Specify classes data file in CSV format.
+  -o NAME                           Prefix for output directory [default: out].
+  -c N, --class_confidence=N        Confidence bias for clustering
+                                    [default: 1.0].
+  -k N                              Number of links towards closest neighbors
+                                    with same class [default: 3].
+  -d N                              Number of links towards denser neighbors
+                                    with a different class [default: 1]
+  -z N                              Number of nearest neighbors to limit the
+                                    horizon where to search for denser
+                                    neighbors of a different class [default: 5]
+  -l N                              Number of mutual nearest neighbors that
+                                    define outlier instances [default: 3]
+  --correlation_transformation      Convert data matrix to corr coeff matrix.
   --min_threshold=N                 Min num instances per class [default: 5]
   --max_threshold=N                 Max num instances per class [default: 200]
-  -o NAME                           Prefix for output directory [default: out].
-  -c N, --class_confidence=N        Contraction bias for clustering
-                                    [default: 1.0].
-  -k N                              Number of neighbors for knn links
-                                    [default: 3].
-  -l N, --locality=N                Locality parameter, i.e. gamma coefficient
-                                    for the gaussian kernel [default: 150].
-  --correlation_transformation      Convert data matrix to corr coeff matrix.
   --display                         Display graphs on terminal.
   --figure_size=N                   Figure size [default: 15].
   --cmap_name=NAME                  Color scheme [default: gist_ncar].
@@ -252,15 +257,17 @@ def main(args):
     # setup variables
     data_fname = args['-i']
     target_fname = args['-t']
+    name = args['-o']
+    k = int(args['-k'])
+    k_quick_shift = int(args['-d'])
+    knn_horizon = int(args['-z'])
+    k_outliers = int(args['-l'])
+    class_bias = float(args['--class_confidence'][0])
+    correlation_transformation = args['--correlation_transformation']
+    display = args['--display']
     min_threshold = int(args['--min_threshold'])
     max_threshold = int(args['--max_threshold'])
     cmap_name = args['--cmap_name']
-    name = args['-o']
-    display = args['--display']
-    k = int(args['-k'])
-    gamma = int(args['--locality'][0])
-    class_bias = float(args['--class_confidence'][0])
-    correlation_transformation = args['--correlation_transformation']
     figure_size = int(args['--figure_size'])
 
     # output setup
@@ -291,9 +298,12 @@ def main(args):
     file_name = os.path.join(dir_name, 'img')
 
     ge = GraphEmbedder(
-        k=k,
         class_bias=class_bias,
-        metric='rbf', gamma=gamma)
+        k=k,
+        k_quick_shift=k_quick_shift,
+        k_outliers=k_outliers,
+        knn_horizon=knn_horizon,
+        metric='cosine')
     data_matrix_2d = ge.transform(data_matrix=data_matrix, target=y)
 
     # make images
@@ -312,6 +322,7 @@ def main(args):
                      figure_size=figure_size)
 
     ge.display_hull(target_dict=target_dict,
+                    true_target=y,
                     display=display,
                     display_outliers=True,
                     remove_outer_layer=False,
