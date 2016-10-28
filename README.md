@@ -43,9 +43,9 @@ You can execute the program by typing:
 
 You can change the strength of the belief in the supervised information. Values higher than 0 indicate a stronger belief and will result in more compact layouts for instances of the same class. Values of 0.5-1 are suitable for clean data where clusters are naturally well separated, values of 5-30 are suitable for noisy data where it is necessary to force a strong separation in the 2D representation. 
 
-To set a desired separation strength use -c, to specify the number of neighbors use -k, to specify the locality use -l:
+To set a desired separation strength use -c, to specify the number of neighbors use -k:
 
-```./graph_embed -i example/prot_expression.csv -t example/target.csv --correlation_transformation -c 5 -k 4 -l 50```
+```./graph_embed -i example/prot_expression.csv -t example/target.csv --correlation_transformation -c 5 -k 4```
 
 
 ## Output
@@ -72,7 +72,7 @@ Author: Fabrizio Costa [costa@informatik.uni-freiburg.de]
 
 Usage:
   graph_embed -i <file> -t <file> [-o NAME]
-              [-c N, --class_confidence=N] [-k=N] [-l N, --locality=N]
+              [-c N, --class_confidence=N] [-k N] [-d N] [-z N] [-l N]
               [--correlation_transformation]
               [--min_threshold=N] [--max_threshold=N]
               [--display] [--figure_size=N] [--cmap_name=NAME] [--verbose]
@@ -82,16 +82,21 @@ Usage:
 Options:
   -i <file>                         Specify input data file in CSV format.
   -t <file>                         Specify classes data file in CSV format.
+  -o NAME                           Prefix for output directory [default: out].
+  -c N, --class_confidence=N        Confidence bias for clustering
+                                    [default: 1.0].
+  -k N                              Number of links towards closest neighbors
+                                    with same class [default: 3].
+  -d N                              Number of links towards denser neighbors
+                                    with a different class [default: 1]
+  -z N                              Number of nearest neighbors to limit the
+                                    horizon where to search for denser
+                                    neighbors of a different class [default: 5]
+  -l N                              Number of mutual nearest neighbors that
+                                    define outlier instances [default: 3]
+  --correlation_transformation      Convert data matrix to corr coeff matrix.
   --min_threshold=N                 Min num instances per class [default: 5]
   --max_threshold=N                 Max num instances per class [default: 200]
-  -o NAME                           Prefix for output directory [default: out].
-  -c N, --class_confidence=N        Contraction bias for clustering
-                                    [default: 1.0].
-  -k N                              Number of neighbors for knn links
-                                    [default: 3].
-  -l N, --locality=N                Locality parameter, i.e. gamma coefficient
-                                    for the gaussian kernel [default: 150].
-  --correlation_transformation      Convert data matrix to corr coeff matrix.
   --display                         Display graphs on terminal.
   --figure_size=N                   Figure size [default: 15].
   --cmap_name=NAME                  Color scheme [default: gist_ncar].
