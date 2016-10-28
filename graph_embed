@@ -32,9 +32,11 @@ Author: Fabrizio Costa [costa@informatik.uni-freiburg.de]
 Usage:
   graph_embed -i <file> -t <file> [-o NAME]
               [-c N, --class_confidence=N] [-k N] [-d N] [-z N] [-l N]
-              [--correlation_transformation]
-              [--min_threshold=N] [--max_threshold=N]
-              [--display] [--figure_size=N] [--cmap_name=NAME] [--verbose]
+              [--correlation_transformation] [--normalization]
+              [--feature_selection]
+              [--min_threshold=N] [--max_threshold=N] [--random_state=N]
+              [--display] [--figure_size=N] [--cmap_name=NAME]
+              [--verbose]
   graph_embed (-h | --help)
   graph_embed --version
 
@@ -53,9 +55,12 @@ Options:
                                     neighbors of a different class [default: 5]
   -l N                              Number of mutual nearest neighbors that
                                     define outlier instances [default: 3]
+  --normalization                   Convert data matrix to normalized matrix.
+  --feature_selection               Select most discriminative features.
   --correlation_transformation      Convert data matrix to corr coeff matrix.
   --min_threshold=N                 Min num instances per class [default: 5]
-  --max_threshold=N                 Max num instances per class [default: 200]
+  --max_threshold=N                 Max num instances per class [default: 300]
+  --random_state=N                  Random seed [default: 1]
   --display                         Display graphs on terminal.
   --figure_size=N                   Figure size [default: 15].
   --cmap_name=NAME                  Color scheme [default: gist_ncar].
@@ -74,6 +79,10 @@ import collections
 from docopt import docopt
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import normalize
+from sklearn.cross_validation import StratifiedKFold
+from sklearn.feature_selection import RFECV
+from sklearn.linear_model import SGDClassifier
 from graph_layout_embedder import GraphEmbedder
 
 logger = logging.getLogger(__name__)
@@ -221,15 +230,14 @@ def _filter_dataset(data_matrix, y, y_sel):
 def pre_process(data_fname=None,
                 target_fname=None,
                 correlation_transformation=None,
+                normalization=None,
+                feature_selection=None,
                 min_threshold=None,
-                max_threshold=None):
+                max_threshold=None,
+                random_state=1):
     """Process data."""
     # load data
     data_matrix, gene_names, instance_names = _loaddata_matrix(data_fname)
-
-    # prepare data matrix
-    if correlation_transformation:
-        data_matrix = np.corrcoef(data_matrix)
 
     # prepare target
     y_orig, target_names = _load_target(target_fname)
@@ -249,6 +257,29 @@ def pre_process(data_fname=None,
     for i, c in enumerate(lenc.classes_):
         target_dict[i] = target_names[c]
 
+    # normalization
+    if normalization:
+        data_matrix = normalize(data_matrix)
+
+    # feature selection
+    if feature_selection:
+        estimator = SGDClassifier(random_state=random_state)
+        cv = StratifiedKFold(y,
+                             n_folds=5,
+                             shuffle=True,
+                             random_state=random_state)
+        selector = RFECV(estimator, step=200, cv=cv)
+        data_matrix = selector.fit_transform(data_matrix, y)
+        logger.info('Feature selection')
+        rows, cols = data_matrix.shape
+        logger.info('num instances:%d  num features:%d' % (rows, cols))
+
+    # prepare data matrix
+    if correlation_transformation:
+        data_matrix = np.corrcoef(data_matrix)
+        logger.info('Correlation coefficient')
+        rows, cols = data_matrix.shape
+        logger.info('num instances:%d  num features:%d' % (rows, cols))
     return data_matrix, y, target_dict
 
 
@@ -264,11 +295,14 @@ def main(args):
     k_outliers = int(args['-l'])
     class_bias = float(args['--class_confidence'][0])
     correlation_transformation = args['--correlation_transformation']
+    normalization = args['--normalization']
+    feature_selection = args['--feature_selection']
     display = args['--display']
     min_threshold = int(args['--min_threshold'])
     max_threshold = int(args['--max_threshold'])
     cmap_name = args['--cmap_name']
     figure_size = int(args['--figure_size'])
+    random_state = int(args['--random_state'])
 
     # output setup
     timestamp = time.strftime('%Y_%m_%d_%H_%M_%S')
@@ -290,8 +324,11 @@ def main(args):
     data_matrix, y, target_dict = pre_process(data_fname,
                                               target_fname,
                                               correlation_transformation,
+                                              normalization,
+                                              feature_selection,
                                               min_threshold,
-                                              max_threshold)
+                                              max_threshold,
+                                              random_state=random_state)
 
     # run embedder
     logger.info('Writing to files in directory: %s' % dir_name)
