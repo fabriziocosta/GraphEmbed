@@ -67,15 +67,17 @@ log               The program execution log file
 ## Help
 
 ```
-Version: 2.2
+Version: 2.3
 Author: Fabrizio Costa [costa@informatik.uni-freiburg.de]
 
 Usage:
   graph_embed -i <file> -t <file> [-o NAME]
               [-c N, --class_confidence=N] [-k N] [-d N] [-z N] [-l N]
-              [--correlation_transformation]
-              [--min_threshold=N] [--max_threshold=N]
-              [--display] [--figure_size=N] [--cmap_name=NAME] [--verbose]
+              [--correlation_transformation] [--normalization]
+              [--feature_selection]
+              [--min_threshold=N] [--max_threshold=N] [--random_state=N]
+              [--display] [--figure_size=N] [--cmap_name=NAME]
+              [--verbose]
   graph_embed (-h | --help)
   graph_embed --version
 
@@ -94,9 +96,12 @@ Options:
                                     neighbors of a different class [default: 5]
   -l N                              Number of mutual nearest neighbors that
                                     define outlier instances [default: 3]
+  --normalization                   Convert data matrix to normalized matrix.
+  --feature_selection               Select most discriminative features.
   --correlation_transformation      Convert data matrix to corr coeff matrix.
   --min_threshold=N                 Min num instances per class [default: 5]
-  --max_threshold=N                 Max num instances per class [default: 200]
+  --max_threshold=N                 Max num instances per class [default: 300]
+  --random_state=N                  Random seed [default: 1]
   --display                         Display graphs on terminal.
   --figure_size=N                   Figure size [default: 15].
   --cmap_name=NAME                  Color scheme [default: gist_ncar].
