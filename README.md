@@ -122,6 +122,6 @@ The image of the 2D embedding with lines in red for knn edges and lines in blue 
 The image of the 2D embedding with lines in blue for the first shift-edges.
 <p align="center"><img src="example/img_3_link.png"></p>
 
-The image of the 2D embedding with class convex hulls and edges with thickness proportional to the number of shift-edges across classes.
+The image of the 2D embedding with class convex hulls and edges with thickness proportional to the number of shift-edges across classes (-1 to account for noise).
 <p align="center"><img src="example/img_4_hull.png"></p>
 
