@@ -26,7 +26,7 @@ corresponding graph embedding using the force layout algorithm from
 Tomihisa Kamada, and Satoru Kawai. "An algorithm for drawing general
 undirected graphs.", Information processing letters 31, no. 1 (1989): 7-15.
 
-Version: 2.2
+Version: 2.3
 Author: Fabrizio Costa [costa@informatik.uni-freiburg.de]
 
 Usage:
@@ -384,5 +384,5 @@ def main(args):
 
 
 if __name__ == '__main__':
-    args = docopt(__doc__, version='graph_embed v2.2')
+    args = docopt(__doc__, version='graph_embed v2.3')
     main(args)
