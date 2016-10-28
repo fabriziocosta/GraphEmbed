@@ -14,7 +14,7 @@ Density is defined as the sum of the pairwise cosine similarity between
 an instance and all the other instances.
 The desired edge length is the euclidean distance between the instances.
 If the endpoints of an edge have the same label then the desired distance
-is divided by 1 + class_bias.
+is divided by 1 + class_confidence.
 A k-shift edge is deleted if at least one of the endpoints is an
 outlier.
 Outlier nodes are defined as those instances that have no mutual
