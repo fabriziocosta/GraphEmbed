@@ -45,7 +45,7 @@ You can change the strength of the belief in the supervised information. Values 
 
 To set a desired separation strength use -c, to specify the number of neighbors use -k:
 
-```./graph_embed -i example/prot_expression.csv -t example/target.csv --correlation_transformation -c 5 -k 4```
+```./graph_embed -i example/prot_expression.csv -t example/target.csv --normalization --feature_selection --correlation_transformation -c .8 -k 5 -d 1 -z 8 -l 3 --random_state 2```
 
 
 ## Output
