@@ -36,14 +36,14 @@ Usage:
               [--feature_selection]
               [--min_threshold=N] [--max_threshold=N] [--random_state=N]
               [--display] [--figure_size=N] [--cmap_name=NAME]
-              [--verbose]
+              [--verbose] [--do_not_add_timestamp]
   graph_embed (-h | --help)
   graph_embed --version
 
 Options:
   -i <file>                         Specify input data file in CSV format.
   -t <file>                         Specify classes data file in CSV format.
-  -o NAME                           Prefix for output directory [default: out].
+  -o NAME                           Output directory name [default: out].
   -c N, --class_confidence=N        Confidence bias for clustering
                                     [default: 1.0].
   -k N                              Number of links towards closest neighbors
@@ -64,6 +64,8 @@ Options:
   --display                         Display graphs on terminal.
   --figure_size=N                   Figure size [default: 15].
   --cmap_name=NAME                  Color scheme [default: gist_ncar].
+  --do_not_add_timestamp            Do not use timestamp as suffix for
+                                    output directory name.
   -h --help                         Show this screen.
   --version                         Show version.
   --verbose                         Print more text.
@@ -80,7 +82,7 @@ from docopt import docopt
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import normalize
-from sklearn.cross_validation import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold
 from sklearn.feature_selection import RFECV
 from sklearn.linear_model import SGDClassifier
 from graph_layout_embedder import GraphEmbedder
@@ -259,16 +261,16 @@ def pre_process(data_fname=None,
 
     # normalization
     if normalization:
+        logger.info('Normalization')
         data_matrix = normalize(data_matrix)
 
     # feature selection
     if feature_selection:
         estimator = SGDClassifier(random_state=random_state)
-        cv = StratifiedKFold(y,
-                             n_folds=5,
+        cv = StratifiedKFold(n_splits=5,
                              shuffle=True,
                              random_state=random_state)
-        selector = RFECV(estimator, step=200, cv=cv)
+        selector = RFECV(estimator, step=20, cv=cv)
         data_matrix = selector.fit_transform(data_matrix, y)
         logger.info('Feature selection')
         rows, cols = data_matrix.shape
@@ -277,7 +279,7 @@ def pre_process(data_fname=None,
     # prepare data matrix
     if correlation_transformation:
         data_matrix = np.corrcoef(data_matrix)
-        logger.info('Correlation coefficient')
+        logger.info('Correlation coefficient transformation')
         rows, cols = data_matrix.shape
         logger.info('num instances:%d  num features:%d' % (rows, cols))
     return data_matrix, y, target_dict
@@ -303,10 +305,14 @@ def main(args):
     cmap_name = args['--cmap_name']
     figure_size = int(args['--figure_size'])
     random_state = int(args['--random_state'])
+    do_not_add_timestamp = args['--do_not_add_timestamp']
 
     # output setup
     timestamp = time.strftime('%Y_%m_%d_%H_%M_%S')
-    dir_name = name + '_' + timestamp
+    if do_not_add_timestamp is False:
+        dir_name = name + '_' + timestamp
+    else:
+        dir_name = name
     if not os.path.exists(dir_name):
         os.mkdir(dir_name)
 
@@ -361,11 +367,18 @@ def main(args):
     ge.display_hull(target_dict=target_dict,
                     true_target=y,
                     display=display,
-                    display_outliers=True,
                     remove_outer_layer=False,
                     cmap=cmap_name,
                     file_name=file_name,
                     figure_size=figure_size)
+
+    ge.display_hull_link(target_dict=target_dict,
+                         true_target=y,
+                         display=display,
+                         remove_outer_layer=False,
+                         cmap=cmap_name,
+                         file_name=file_name,
+                         figure_size=figure_size)
 
     # write additional files
     out_fname = os.path.join(dir_name, '2D_coords.txt')

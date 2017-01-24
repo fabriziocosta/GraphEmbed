@@ -377,7 +377,6 @@ class GraphEmbedder(object):
                      true_target=None,
                      remove_outer_layer=False,
                      display=True,
-                     display_outliers=False,
                      file_name='',
                      cmap='rainbow',
                      figure_size=15):
@@ -386,14 +385,45 @@ class GraphEmbedder(object):
             self.instance_graph,
             target_dict=target_dict,
             true_target=true_target,
+            display_instances=False,
             display_hull=True,
             remove_outer_layer=remove_outer_layer,
             cmap=cmap,
             figure_size=figure_size,
             node_size=40,
-            display_outliers=display_outliers,
+            display_outliers=False,
             display_edge=False,
+            display_class_id=True,
+            display_class_link=True,
             file_name=file_name + '_4_hull.pdf')
+        if display:
+            plt.show()
+
+    def display_hull_link(self,
+                          target_dict=None,
+                          true_target=None,
+                          remove_outer_layer=False,
+                          display=True,
+                          display_outliers=False,
+                          file_name='',
+                          cmap='rainbow',
+                          figure_size=15):
+        """display_hull."""
+        self.display_graph(
+            self.instance_graph,
+            target_dict=target_dict,
+            true_target=true_target,
+            display_hull=True,
+            display_instances=True,
+            remove_outer_layer=remove_outer_layer,
+            cmap=cmap,
+            figure_size=figure_size,
+            node_size=40,
+            display_outliers=display_outliers,
+            display_edge=True,
+            display_class_id=True,
+            display_class_link=False,
+            file_name=file_name + '_5_hull_link.pdf')
         if display:
             plt.show()
 
@@ -402,10 +432,13 @@ class GraphEmbedder(object):
                       target_dict=None,
                       true_target=None,
                       display_label=False,
+                      display_instances=True,
                       display_edge=True,
                       display_edges=False,
                       display_outliers=False,
                       display_hull=True,
+                      display_class_id=False,
+                      display_class_link=False,
                       remove_outer_layer=False,
                       edge_thickness=40,
                       cmap='gist_ncar',
@@ -430,12 +463,14 @@ class GraphEmbedder(object):
             p.set_array(np.array(range(len(set(self.target)))))
             ax.add_collection(p)
         layout_pos = self._get_node_layout_positions(graph)
+
         if true_target is not None:
             codes = true_target
         else:
             codes = np.array([graph.node[u]['group']
                               for u in graph.nodes()])
         instance_cols = self._get_node_colors(codes, cmap=cmap)
+
         if display_label:
             node_label_dict = {u: target_dict[u] for u in graph.nodes()}
             nx.draw_networkx_labels(graph, layout_pos, node_label_dict,
@@ -444,10 +479,8 @@ class GraphEmbedder(object):
             nx.draw_networkx_labels(graph, layout_pos, node_label_dict,
                                     font_size=14, font_weight='light',
                                     font_color='k')
-        if display_outliers:
-            if display_hull:
-                pass
-            else:
+        if display_instances:
+            if display_outliers:
                 outliers = [(u, col)
                             for u, col in zip(graph.nodes(), instance_cols)
                             if graph.node[u]['outlier']]
@@ -476,9 +509,6 @@ class GraphEmbedder(object):
                                        node_size=node_size,
                                        markeredgecolor='k',
                                        linewidths=1)
-        else:
-            if display_hull:
-                pass
             else:
                 nx.draw_networkx_nodes(graph, layout_pos,
                                        node_color=instance_cols,
@@ -520,10 +550,11 @@ class GraphEmbedder(object):
                 nx.draw_networkx_edges(
                     graph, layout_pos, edgelist=shift_edges, alpha=0.2,
                     width=1, edge_color='cornflowerblue')
-        if display_hull:
-            self._draw_class_id(graph,
+        if display_class_id:
+            self._display_class(graph,
                                 target=true_target,
                                 target_dict=target_dict,
+                                display_edges=display_class_link,
                                 cmap=cmap)
         plt.xticks([])
         plt.yticks([])
@@ -533,10 +564,11 @@ class GraphEmbedder(object):
             plt.savefig(file_name, bbox_inches='tight',
                         transparent=True, pad_inches=0)
 
-    def _draw_class_id(self, graph,
+    def _display_class(self, graph,
                        target=None,
                        target_dict=None,
                        count_th=1,
+                       display_edges=True,
                        cmap=None,
                        node_size=350):
         group_coords = defaultdict(list)
@@ -576,9 +608,10 @@ class GraphEmbedder(object):
         widths = [average_graph.edge[i][j]['width'] * 20
                   for i, j in average_graph.edges()]
 
-        nx.draw_networkx_edges(average_graph, layout_pos,
-                               width=widths, edge_color='cornflowerblue',
-                               alpha=.5)
+        if display_edges:
+            nx.draw_networkx_edges(average_graph, layout_pos,
+                                   width=widths, edge_color='cornflowerblue',
+                                   alpha=.5)
         nx.draw_networkx_nodes(average_graph, layout_pos,
                                node_color='w',
                                node_size=node_size,
