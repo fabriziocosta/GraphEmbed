@@ -39,13 +39,13 @@ conda install graph_embed -c bioconda
 
 You can execute the program by typing:
 
-```./graph_embed -i example/prot_expression.csv -t example/target.csv --correlation_transformation```
+```./graph_embed -i example/prot_expression.csv -t example/target.csv```
 
 You can change the strength of the belief in the supervised information. Values higher than 0 indicate a stronger belief and will result in more compact layouts for instances of the same class. Values of 0.5-1 are suitable for clean data where clusters are naturally well separated, values of 5-30 are suitable for noisy data where it is necessary to force a strong separation in the 2D representation. 
 
 To set a desired separation strength use -c, to specify the number of neighbors use -k:
 
-```./graph_embed -i example/prot_expression.csv -t example/target.csv --normalization --feature_selection --correlation_transformation -c .8 -k 5 -d 1 -z 8 -l 3 --random_state 2```
+```./graph_embed -i example/prot_expression.csv -t example/target.csv -c 1.5 --correlation_transformation -k 5 -z 10 --feature_selection --random_state 2 -l 0 --normalization```
 
 
 ## Output
@@ -55,13 +55,14 @@ The directory name is suffixed with a time stamp that includes year-month-day-ho
 The following files are produced:
 
 ```
-2D_coords.txt     The 2D coordinates, one line per instance
-target.txt        The target identifier, one line per instance 
-img_1_clean.pdf   The image of the 2D embedding.
-img_2_edges.pdf   The image of the 2D embedding with lines in red for knn edges and lines in blue for k-shift-edges.
-img_3_edge.pdf    The image of the 2D embedding with lines in blue for the first shift-edges.
-img_4_hull.pdf    The image of the 2D embedding with class convex hulls and first shift-edges.
-log               The program execution log file
+2D_coords.txt       The 2D coordinates, one line per instance
+target.txt          The target identifier, one line per instance 
+img_1_clean.pdf     The image of the 2D embedding.
+img_2_edges.pdf     The image of the 2D embedding with lines in red for knn edges and lines in blue for k-shift-edges.
+img_3_edge.pdf      The image of the 2D embedding with lines in blue for the first shift-edges.
+img_4_hull.pdf      The image of the 2D embedding with class convex hulls and edges proportional to the num of first shift-edges across classes.
+img_5_hull_link.pdf The image of the 2D embedding with class convex hulls and first shift-edges.
+log                 The program execution log file
 ```
 
 ## Help
@@ -122,6 +123,9 @@ The image of the 2D embedding with lines in red for knn edges and lines in blue 
 The image of the 2D embedding with lines in blue for the first shift-edges.
 <p align="center"><img src="example/img_3_link.png"></p>
 
-The image of the 2D embedding with class convex hulls and edges with thickness proportional to the number of shift-edges across classes (-1 to account for noise).
+The image of the 2D embedding with class convex hulls and edges with thickness proportional to the number of shift-edges across classes (effectively, num - 1 to account for potential random single link).
 <p align="center"><img src="example/img_4_hull.png"></p>
+
+The image of the 2D embedding with class convex hulls and edges  in blue for the first shift-edges..
+<p align="center"><img src="example/img_5_hull_link.png"></p>
 
