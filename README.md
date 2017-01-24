@@ -68,7 +68,7 @@ log                 The program execution log file
 ## Help
 
 ```
-Version: 2.3
+Version: 2.4
 Author: Fabrizio Costa [costa@informatik.uni-freiburg.de]
 
 Usage:
@@ -78,14 +78,14 @@ Usage:
               [--feature_selection]
               [--min_threshold=N] [--max_threshold=N] [--random_state=N]
               [--display] [--figure_size=N] [--cmap_name=NAME]
-              [--verbose]
+              [--verbose] [--do_not_add_timestamp]
   graph_embed (-h | --help)
   graph_embed --version
 
 Options:
   -i <file>                         Specify input data file in CSV format.
   -t <file>                         Specify classes data file in CSV format.
-  -o NAME                           Prefix for output directory [default: out].
+  -o NAME                           Output directory name [default: out].
   -c N, --class_confidence=N        Confidence bias for clustering
                                     [default: 1.0].
   -k N                              Number of links towards closest neighbors
@@ -106,6 +106,8 @@ Options:
   --display                         Display graphs on terminal.
   --figure_size=N                   Figure size [default: 15].
   --cmap_name=NAME                  Color scheme [default: gist_ncar].
+  --do_not_add_timestamp            Do not use timestamp as suffix for
+                                    output directory name.
   -h --help                         Show this screen.
   --version                         Show version.
   --verbose                         Print more text.
