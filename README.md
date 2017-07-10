@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.59227.svg)](http://dx.doi.org/10.5281/zenodo.59227)
+[![DOI](https://zenodo.org/badge/61370061.svg)](https://zenodo.org/badge/latestdoi/61370061)
 
 # GraphEmbed
 Compute a 2D embedding of a data matrix given supervised class information.
