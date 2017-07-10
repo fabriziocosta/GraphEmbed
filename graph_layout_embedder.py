@@ -13,6 +13,7 @@ import numpy as np
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics.pairwise import pairwise_kernels
 from sklearn.metrics.pairwise import pairwise_distances
+from toolz import memoize
 
 import logging
 logger = logging.getLogger(__name__)
@@ -70,8 +71,6 @@ class GraphEmbedder(object):
         self.graph = None
         self.knn_graph = None
 
-        logger.debug('%s' % str(self))
-
     def __str__(self):
         """String."""
         def serialize_dict(the_dict, full=True, offset='small'):
@@ -107,23 +106,33 @@ class GraphEmbedder(object):
                                           k=self.k,
                                           k_quick_shift=self.k_quick_shift,
                                           k_outliers=self.k_outliers,
-                                          knn_horizon=self.knn_horizon)
-        self.annotate_graph_with_graphviz_layout(instance_graph)
-        embedded_data_matrix = [instance_graph.node[v]['pos']
-                                for v in instance_graph.nodes()]
-        self.instance_graph = instance_graph
+                                          knn_horizon=self.knn_horizon,
+                                          class_bias=self.class_bias)
+        self.instance_graph = self.annotate_graph_with_graphviz_layout(
+            instance_graph,
+            random_state=self.random_state)
+        embedded_data_matrix = [self.instance_graph.node[v]['pos']
+                                for v in self.instance_graph.nodes()]
 
         self.embedded_data_matrix = np.array(embedded_data_matrix)
         self.target = target
         return self.embedded_data_matrix
 
+    @memoize(key=lambda args, kwargs:
+             (np.sum(kwargs['data_matrix']),
+              kwargs['k'],
+              kwargs['k_quick_shift'],
+              kwargs['k_outliers'],
+              kwargs['knn_horizon'],
+              kwargs['class_bias']))
     def build_graph(self,
                     data_matrix=None,
                     target=None,
                     k=3,
                     k_quick_shift=1,
                     k_outliers=5,
-                    knn_horizon=5):
+                    knn_horizon=5,
+                    class_bias=1):
         """Build graph."""
         size = data_matrix.shape[0]
         # make kernel
@@ -140,6 +149,14 @@ class GraphEmbedder(object):
 
         # make a graph with instances as nodes
         graph = nx.Graph()
+        # use as identifier of the matrix the sum of its entries
+        graph_id = (np.sum(density),
+                    k,
+                    k_quick_shift,
+                    k_outliers,
+                    knn_horizon,
+                    class_bias)
+        graph.graph['id'] = graph_id
         for v in range(size):
             graph.add_node(v, group=target[v], outlier=False)
 
@@ -171,7 +188,7 @@ class GraphEmbedder(object):
             for i, link in enumerate(link_ids):
                 if i != link:
                     graph.add_edge(i, link, edge_type='shift', rank=th)
-        graph = self._compute_edge_len(graph, data_matrix, target)
+        graph = self._compute_edge_len(graph, data_matrix, target, class_bias)
         return graph
 
     def _diameter(self, data_matrix):
@@ -184,7 +201,10 @@ class GraphEmbedder(object):
         return max([np.linalg.norm(point - curr_point)
                     for point in data_matrix])
 
-    def _compute_edge_len(self, graph, data_matrix, target):
+    @memoize(key=lambda args, kwargs:
+             (args[1].graph['id'], args[4]))
+    def _compute_edge_len(self, orig_graph, data_matrix, target, class_bias):
+        graph = orig_graph.copy()
         _max_dist = self._diameter(data_matrix)
         for src_id, dest_id in graph.edges():
             if src_id != dest_id:
@@ -197,7 +217,7 @@ class GraphEmbedder(object):
                 # if endpoints of an edge have the same
                 # class then contract teh desired edge length
                 if target[src_id] == target[dest_id]:
-                    desired_dist /= (1 + self.class_bias)
+                    desired_dist /= (1 + class_bias)
                 graph[src_id][dest_id]['len'] = desired_dist
                 graph[src_id][dest_id]['weight'] = 1
 
@@ -266,6 +286,8 @@ class GraphEmbedder(object):
                     break
         return graph
 
+    @memoize(key=lambda args, kwargs:
+             (args[1].graph['id'], kwargs['nneighbors_th']))
     def _annotate_outliers(self, graph, nneighbors_th=1,
                            kernel_matrix=None, knn_ids=None):
         size = kernel_matrix.shape[0]
@@ -288,17 +310,22 @@ class GraphEmbedder(object):
                 outlier_status = True
             graph.node[i]['outlier'] = outlier_status
 
-    def annotate_graph_with_graphviz_layout(self, graph, random_state=1):
+    @memoize(key=lambda args, kwargs:
+             (args[1].graph['id'], kwargs['random_state']))
+    def annotate_graph_with_graphviz_layout(self, orig_graph, random_state=1):
         """Annotate graph with layout information."""
+        graph = orig_graph.copy()
         # remove previous positional annotations
         for v in graph.nodes():
             if 'pos' in graph.node[v]:
                 graph.node[v].pop('pos')
 
-        layout_pos = nx.graphviz_layout(
-            graph,
-            prog='neato',
-            args='-Goverlap=False -Gstart=%d' % random_state)
+        layout_pos = nx.graphviz_layout(graph)
+
+        # layout_pos = nx.graphviz_layout(
+        #    graph,
+        #    prog='neato',
+        #    args='-Goverlap=False -Gstart=%d' % random_state)
 
         # annotate nodes with positional information
         for v in graph.nodes():
@@ -310,6 +337,7 @@ class GraphEmbedder(object):
                 print v, layout_pos[v], graph.neighbors(v)
                 raise Exception('Assigned NaN value to position')
             graph.node[v]['pos'] = layout_pos[v]
+        return graph
 
     def display(self,
                 target_dict=None,
@@ -318,7 +346,8 @@ class GraphEmbedder(object):
                 display_outliers=False,
                 file_name='',
                 cmap='rainbow',
-                figure_size=15):
+                figure_size=15,
+                save_figure=True):
         """Display."""
         self.display_graph(
             self.instance_graph,
@@ -330,7 +359,8 @@ class GraphEmbedder(object):
             node_size=40,
             display_edge=False,
             display_outliers=display_outliers,
-            file_name=file_name + '_1_clean.pdf')
+            file_name=file_name + '_1_clean.pdf',
+            save_figure=save_figure)
         if display:
             plt.show()
 
@@ -341,7 +371,8 @@ class GraphEmbedder(object):
                       display_outliers=False,
                       file_name='',
                       cmap='rainbow',
-                      figure_size=15):
+                      figure_size=15,
+                      save_figure=True):
         """display_links."""
         self.display_graph(
             self.instance_graph,
@@ -355,7 +386,21 @@ class GraphEmbedder(object):
             node_size=40,
             edge_thickness=.01,
             display_outliers=display_outliers,
-            file_name=file_name + '_2_links.pdf')
+            file_name=file_name + '_2_links.pdf',
+            save_figure=save_figure)
+        if display:
+            plt.show()
+
+    def display_link(self,
+                     target_dict=None,
+                     true_target=None,
+                     display=True,
+                     display_outliers=False,
+                     file_name='',
+                     cmap='rainbow',
+                     figure_size=15,
+                     save_figure=True):
+        """display_link."""
         self.display_graph(
             self.instance_graph,
             target_dict=target_dict,
@@ -368,7 +413,8 @@ class GraphEmbedder(object):
             node_size=40,
             edge_thickness=.01,
             display_outliers=display_outliers,
-            file_name=file_name + '_3_link.pdf')
+            file_name=file_name + '_3_link.pdf',
+            save_figure=save_figure)
         if display:
             plt.show()
 
@@ -379,7 +425,8 @@ class GraphEmbedder(object):
                      display=True,
                      file_name='',
                      cmap='rainbow',
-                     figure_size=15):
+                     figure_size=15,
+                     save_figure=True):
         """display_hull."""
         self.display_graph(
             self.instance_graph,
@@ -395,7 +442,8 @@ class GraphEmbedder(object):
             display_edge=False,
             display_class_id=True,
             display_class_link=True,
-            file_name=file_name + '_4_hull.pdf')
+            file_name=file_name + '_4_hull.pdf',
+            save_figure=save_figure)
         if display:
             plt.show()
 
@@ -407,7 +455,8 @@ class GraphEmbedder(object):
                           display_outliers=False,
                           file_name='',
                           cmap='rainbow',
-                          figure_size=15):
+                          figure_size=15,
+                          save_figure=True):
         """display_hull."""
         self.display_graph(
             self.instance_graph,
@@ -423,7 +472,8 @@ class GraphEmbedder(object):
             display_edge=True,
             display_class_id=True,
             display_class_link=False,
-            file_name=file_name + '_5_hull_link.pdf')
+            file_name=file_name + '_5_hull_link.pdf',
+            save_figure=save_figure)
         if display:
             plt.show()
 
@@ -444,20 +494,26 @@ class GraphEmbedder(object):
                       cmap='gist_ncar',
                       node_size=600,
                       figure_size=15,
-                      file_name=''):
+                      file_name='',
+                      save_figure=True):
         """Display graph."""
         if target_dict is None:
             target_dict = {i: i for i in set(self.target)}
         fig, ax = plt.subplots(figsize=(figure_size, figure_size))
 
         if display_hull:
+            x = [graph.node[v]['pos'] for v in graph.nodes()
+                 if not graph.node[v]['outlier']]
+            y = [graph.node[v]['group'] for v in graph.nodes()
+                 if not graph.node[v]['outlier']]
             patches = []
             for points in self._convex_hull(
-                    self.embedded_data_matrix, self.target,
+                    x, y,
                     remove_outer_layer=remove_outer_layer):
                 polygon = Polygon(points)
                 patches.append(polygon)
             p = PatchCollection(patches,
+                                edgecolor='k',
                                 cmap=plt.get_cmap(cmap),
                                 alpha=0.8)
             p.set_array(np.array(range(len(set(self.target)))))
@@ -467,8 +523,8 @@ class GraphEmbedder(object):
         if true_target is not None:
             codes = true_target
         else:
-            codes = np.array([graph.node[u]['group']
-                              for u in graph.nodes()])
+            codes = [graph.node[u]['group']
+                     for u in graph.nodes()]
         instance_cols = self._get_node_colors(codes, cmap=cmap)
 
         if display_label:
@@ -503,17 +559,18 @@ class GraphEmbedder(object):
                                 if not graph.node[u]['outlier']]
                 nodelist = [u for u, col in non_outliers]
                 node_color = [col for u, col in non_outliers]
-                nx.draw_networkx_nodes(graph, layout_pos,
-                                       node_color=node_color,
-                                       nodelist=nodelist,
-                                       node_size=node_size,
-                                       markeredgecolor='k',
-                                       linewidths=1)
+                nodes = nx.draw_networkx_nodes(graph, layout_pos,
+                                               node_color=node_color,
+                                               nodelist=nodelist,
+                                               node_size=node_size,
+                                               linewidths=1)
+                nodes.set_edgecolor('k')
             else:
-                nx.draw_networkx_nodes(graph, layout_pos,
-                                       node_color=instance_cols,
-                                       cmap=cmap, node_size=node_size,
-                                       linewidths=1)
+                nodes = nx.draw_networkx_nodes(graph, layout_pos,
+                                               node_color=instance_cols,
+                                               cmap=cmap, node_size=node_size,
+                                               linewidths=1)
+                nodes.set_edgecolor('k')
         if display_edges:
             # knn edges
             knn_edges = [(u, v) for u, v in graph.edges()
@@ -560,7 +617,7 @@ class GraphEmbedder(object):
         plt.yticks([])
         plt.axis('off')
         plt.draw()
-        if file_name:
+        if save_figure:
             plt.savefig(file_name, bbox_inches='tight',
                         transparent=True, pad_inches=0)
 
@@ -634,6 +691,7 @@ class GraphEmbedder(object):
         #                         font_color='k')
 
     def _get_node_colors(self, codes, cmap=None):
+        codes = np.array(codes)
         cm = matplotlib.cm.ScalarMappable(
             norm=matplotlib.colors.Normalize(vmin=min(codes),
                                              vmax=max(codes)),

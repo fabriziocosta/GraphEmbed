@@ -86,6 +86,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.feature_selection import RFECV
 from sklearn.linear_model import SGDClassifier
 from graph_layout_embedder import GraphEmbedder
+from toolz import memoize
 
 logger = logging.getLogger(__name__)
 
@@ -159,6 +160,7 @@ def configure_logging(logger, verbosity=0, filename=None):
         logger.addHandler(fh)
 
 
+@memoize
 def _loaddata_matrix(fname):
     logger.info('Reading data from file: %s' % fname)
     data_matrix_original = []
@@ -180,6 +182,7 @@ def _loaddata_matrix(fname):
     return data_matrix, gene_names, instance_names
 
 
+@memoize
 def _load_target(fname):
     logger.info('Reading data from file: %s' % fname)
     targets = []
@@ -229,6 +232,7 @@ def _filter_dataset(data_matrix, y, y_sel):
     return _data_matrix, y
 
 
+@memoize
 def pre_process(data_fname=None,
                 target_fname=None,
                 correlation_transformation=None,
