@@ -27,6 +27,8 @@ undirected graphs.", Information processing letters 31, no. 1 (1989): 7-15.
 
 <p align="center"><img src="example/img_1_clean.png"></p>
 
+Here is a link to the [interactive jupyter notebook](https://github.com/fabriziocosta/GraphEmbed/blob/master/interactive_graph_layout.ipynb) (needs to be run locally).
+
 ## Installation
 
 GraphEmbed can be installed via [conda](http://conda.pydata.org/miniconda.html):
