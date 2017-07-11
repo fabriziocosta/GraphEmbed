@@ -41,7 +41,7 @@ conda install graph_embed -c bioconda
 
 You can execute the program by typing:
 
-```./graph_embed -i example/prot_expression.csv -t example/target.csv```
+```./graph_embed.py -i example/prot_expression.csv -t example/target.csv```
 
 You can change the strength of the belief in the supervised information. Values higher than 0 indicate a stronger belief and will result in more compact layouts for instances of the same class. Values of 0.5-1 are suitable for clean data where clusters are naturally well separated, values of 5-30 are suitable for noisy data where it is necessary to force a strong separation in the 2D representation. 
 
@@ -74,7 +74,7 @@ Version: 2.4
 Author: Fabrizio Costa [costa@informatik.uni-freiburg.de]
 
 Usage:
-  graph_embed -i <file> -t <file> [-o NAME]
+  graph_embed.py -i <file> -t <file> [-o NAME]
               [-c N, --class_confidence=N] [-k N] [-d N] [-z N] [-l N]
               [--correlation_transformation] [--normalization]
               [--feature_selection]
