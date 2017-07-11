@@ -47,19 +47,19 @@ Options:
   -c N, --class_confidence=N        Confidence bias for clustering
                                     [default: 1.0].
   -k N                              Number of links towards closest neighbors
-                                    with same class [default: 3].
+                                    with same class [default: 5].
   -d N                              Number of links towards denser neighbors
                                     with a different class [default: 1]
   -z N                              Number of nearest neighbors to limit the
-                                    horizon where to search for denser
-                                    neighbors of a different class [default: 5]
+                                    horizon to limit search of denser neighbors
+                                    of a different class [default: 10]
   -l N                              Number of mutual nearest neighbors that
-                                    define outlier instances [default: 3]
+                                    define outlier instances [default: 0]
   --normalization                   Convert data matrix to normalized matrix.
   --feature_selection               Select most discriminative features.
   --correlation_transformation      Convert data matrix to corr coeff matrix.
   --min_threshold=N                 Min num instances per class [default: 5]
-  --max_threshold=N                 Max num instances per class [default: 300]
+  --max_threshold=N                 Max num instances per class [default: 400]
   --random_state=N                  Random seed [default: 1]
   --display                         Display graphs on terminal.
   --figure_size=N                   Figure size [default: 15].
