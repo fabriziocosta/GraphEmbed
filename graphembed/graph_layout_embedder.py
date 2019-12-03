@@ -111,7 +111,7 @@ class GraphEmbedder(object):
         self.instance_graph = self.annotate_graph_with_graphviz_layout(
             instance_graph,
             random_state=self.random_state)
-        embedded_data_matrix = [self.instance_graph.node[v]['pos']
+        embedded_data_matrix = [self.instance_graph.nodes[v]['pos']
                                 for v in self.instance_graph.nodes()]
 
         self.embedded_data_matrix = np.array(embedded_data_matrix)
@@ -223,8 +223,8 @@ class GraphEmbedder(object):
 
                 # if shift edge has one endpoint that is an
                 # outlier then remove the edge altogether
-                i_outl = graph.node[src_id]['outlier']
-                j_outl = graph.node[dest_id]['outlier']
+                i_outl = graph.nodes[src_id]['outlier']
+                j_outl = graph.nodes[dest_id]['outlier']
                 if i_outl or j_outl:
                     if graph[src_id][dest_id]['edge_type'] == 'shift':
                         graph.remove_edge(src_id, dest_id)
@@ -308,7 +308,7 @@ class GraphEmbedder(object):
                 outlier_status = False
             else:
                 outlier_status = True
-            graph.node[i]['outlier'] = outlier_status
+            graph.nodes[i]['outlier'] = outlier_status
 
     @memoize(key=lambda args, kwargs:
              (args[1].graph['id'], kwargs['random_state']))
@@ -317,10 +317,10 @@ class GraphEmbedder(object):
         graph = orig_graph.copy()
         # remove previous positional annotations
         for v in graph.nodes():
-            if 'pos' in graph.node[v]:
-                graph.node[v].pop('pos')
+            if 'pos' in graph.nodes[v]:
+                graph.nodes[v].pop('pos')
 
-        layout_pos = nx.graphviz_layout(graph)
+        layout_pos = nx.drawing.nx_agraph.graphviz_layout(graph)
 
         # layout_pos = nx.graphviz_layout(
         #    graph,
@@ -334,9 +334,9 @@ class GraphEmbedder(object):
                layout_pos[v][1] == layout_pos[v][1]):
                 pass
             else:
-                print v, layout_pos[v], graph.neighbors(v)
+                print(v, layout_pos[v], graph.neighbors(v))
                 raise Exception('Assigned NaN value to position')
-            graph.node[v]['pos'] = layout_pos[v]
+            graph.nodes[v]['pos'] = layout_pos[v]
         return graph
 
     def display(self,
@@ -502,10 +502,10 @@ class GraphEmbedder(object):
         fig, ax = plt.subplots(figsize=(figure_size, figure_size))
 
         if display_hull:
-            x = [graph.node[v]['pos'] for v in graph.nodes()
-                 if not graph.node[v]['outlier']]
-            y = [graph.node[v]['group'] for v in graph.nodes()
-                 if not graph.node[v]['outlier']]
+            x = [graph.nodes[v]['pos'] for v in graph.nodes()
+                 if not graph.nodes[v]['outlier']]
+            y = [graph.nodes[v]['group'] for v in graph.nodes()
+                 if not graph.nodes[v]['outlier']]
             patches = []
             for points in self._convex_hull(
                     x, y,
@@ -516,14 +516,14 @@ class GraphEmbedder(object):
                                 edgecolor='k',
                                 cmap=plt.get_cmap(cmap),
                                 alpha=0.8)
-            p.set_array(np.array(range(len(set(self.target)))))
+            p.set_array(np.array(list(range(len(set(self.target))))))
             ax.add_collection(p)
         layout_pos = self._get_node_layout_positions(graph)
 
         if true_target is not None:
             codes = true_target
         else:
-            codes = [graph.node[u]['group']
+            codes = [graph.nodes[u]['group']
                      for u in graph.nodes()]
         instance_cols = self._get_node_colors(codes, cmap=cmap)
 
@@ -539,7 +539,7 @@ class GraphEmbedder(object):
             if display_outliers:
                 outliers = [(u, col)
                             for u, col in zip(graph.nodes(), instance_cols)
-                            if graph.node[u]['outlier']]
+                            if graph.nodes[u]['outlier']]
                 nodelist = [u for u, col in outliers]
                 node_color = [col for u, col in outliers]
                 nx.draw_networkx_nodes(graph, layout_pos,
@@ -556,7 +556,7 @@ class GraphEmbedder(object):
                                        linewidths=0)
                 non_outliers = [(u, col)
                                 for u, col in zip(graph.nodes(), instance_cols)
-                                if not graph.node[u]['outlier']]
+                                if not graph.nodes[u]['outlier']]
                 nodelist = [u for u, col in non_outliers]
                 node_color = [col for u, col in non_outliers]
                 nodes = nx.draw_networkx_nodes(graph, layout_pos,
@@ -632,8 +632,8 @@ class GraphEmbedder(object):
         node_label_dict = dict()
         ids = graph.nodes()
         for id in ids:
-            group_id = graph.node[id]['group']
-            group_coords[group_id].append(graph.node[id]['pos'])
+            group_id = graph.nodes[id]['group']
+            group_coords[group_id].append(graph.nodes[id]['pos'])
         average_graph = nx.Graph()
         for group_id in group_coords:
             node_label_dict[group_id] = target_dict[group_id]
@@ -662,7 +662,7 @@ class GraphEmbedder(object):
             width = rel_counts[key] / float(m)
             average_graph.add_edge(u, v, width=width)
 
-        widths = [average_graph.edge[i][j]['width'] * 20
+        widths = [average_graph[i][j]['width'] * 20
                   for i, j in average_graph.edges()]
 
         if display_edges:
@@ -696,7 +696,7 @@ class GraphEmbedder(object):
             norm=matplotlib.colors.Normalize(vmin=min(codes),
                                              vmax=max(codes)),
             cmap=cmap)
-        cols = np.array(range(min(codes), max(codes) + 1))
+        cols = np.array(list(range(min(codes), max(codes) + 1)))
         # remove 4th column=alpha
         rgba_color_codes = cm.to_rgba(cols)[:, :3]
 
@@ -706,7 +706,7 @@ class GraphEmbedder(object):
         return instance_cols
 
     def _get_node_layout_positions(self, graph):
-        layout_pos = {v: graph.node[v]['pos'] for v in graph.nodes()}
+        layout_pos = {v: graph.nodes[v]['pos'] for v in graph.nodes()}
         for pos in layout_pos:
             assert(layout_pos[pos][0] == layout_pos[pos][0] and
                    layout_pos[pos][1] == layout_pos[pos][1]),\

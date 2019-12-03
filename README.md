@@ -37,6 +37,12 @@ GraphEmbed can be installed via [conda](http://conda.pydata.org/miniconda.html):
 conda install graph_embed -c bioconda
 ```
 
+GraphEmbed can be installed via PyPI
+
+```bash
+pip install graphembed
+```
+
 ## Usage
 
 You can execute the program by typing:

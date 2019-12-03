@@ -85,7 +85,7 @@ from sklearn.preprocessing import normalize
 from sklearn.model_selection import StratifiedKFold
 from sklearn.feature_selection import RFECV
 from sklearn.linear_model import SGDClassifier
-from graph_layout_embedder import GraphEmbedder
+from graphembed.graph_layout_embedder import GraphEmbedder
 from toolz import memoize
 
 logger = logging.getLogger(__name__)
@@ -289,9 +289,10 @@ def pre_process(data_fname=None,
     return data_matrix, y, target_dict
 
 
-def main(args):
+def main():
     """Main."""
     # setup variables
+    args = docopt(__doc__, version='graph_embed v2.4')
     data_fname = args['-i']
     target_fname = args['-t']
     name = args['-o']
@@ -401,5 +402,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    args = docopt(__doc__, version='graph_embed v2.4')
-    main(args)
+    main()
