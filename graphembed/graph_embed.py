@@ -85,7 +85,7 @@ from sklearn.preprocessing import normalize
 from sklearn.model_selection import StratifiedKFold
 from sklearn.feature_selection import RFECV
 from sklearn.linear_model import SGDClassifier
-from graph_layout_embedder import GraphEmbedder
+from graphembed.graph_layout_embedder import GraphEmbedder
 from toolz import memoize
 
 logger = logging.getLogger(__name__)
