@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def _sample(data_matrix, frac):
     n = data_matrix.shape[0]
-    ids = range(n)
+    ids = list(range(n))
     m = int(n * frac)
     m = max(m, 3)
     rids = np.array(sorted(random.sample(ids, m)))
