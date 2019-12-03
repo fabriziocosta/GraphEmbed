@@ -289,9 +289,10 @@ def pre_process(data_fname=None,
     return data_matrix, y, target_dict
 
 
-def main(args):
+def main():
     """Main."""
     # setup variables
+    args = docopt(__doc__, version='graph_embed v2.4')
     data_fname = args['-i']
     target_fname = args['-t']
     name = args['-o']
@@ -401,5 +402,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    args = docopt(__doc__, version='graph_embed v2.4')
-    main(args)
+    main()
