@@ -31,16 +31,21 @@ Here is a link to the [interactive jupyter notebook](https://github.com/fabrizio
 
 ## Installation
 
-GraphEmbed can be installed via [conda](http://conda.pydata.org/miniconda.html):
+GraphEmbed can be installed via PyPI:
 
 ```bash
-conda install graph_embed -c bioconda
+# a non pip dependency is graphviz, you can install this e.g. with 
+conda install pygraphviz
 ```
-
-GraphEmbed can be installed via PyPI
 
 ```bash
 pip install graphembed
+```
+
+a python2 version of GraphEmbed can be installed via [conda](http://conda.pydata.org/miniconda.html):
+
+```bash
+conda install graph_embed -c bioconda
 ```
 
 ## Usage
