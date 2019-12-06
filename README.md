@@ -34,7 +34,7 @@ Here is a link to the [interactive jupyter notebook](https://github.com/fabrizio
 GraphEmbed can be installed via PyPI:
 
 ```bash
-# a non pip dependency is graphviz, you can install this e.g. with 
+# a non pip dependency is graphviz, you can install this e.g. via 
 conda install pygraphviz
 ```
 
@@ -42,7 +42,7 @@ conda install pygraphviz
 pip install graphembed
 ```
 
-a python2 version of GraphEmbed can be installed via [conda](http://conda.pydata.org/miniconda.html):
+A python2 version of GraphEmbed can be installed via [conda](http://conda.pydata.org/miniconda.html):
 
 ```bash
 conda install graph_embed -c bioconda
